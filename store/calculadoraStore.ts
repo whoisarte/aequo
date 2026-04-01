@@ -17,9 +17,8 @@ const datosIniciales: DatosEmpleado = {
   empresa: '',
   fechaIngreso: '',
   fechaSalida: '',
-  salarioDiario: 0,
-  tieneParteProporcional: true,
-  diasVacacionesUsados: 0,
+  tipoDocumento: 'despido',
+  periodos: [],
 }
 
 export const useCalculadoraStore = create<CalculadoraStore>((set) => ({
