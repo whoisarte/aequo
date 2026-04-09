@@ -20,8 +20,9 @@ export default function ConfirmPage() {
         supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
-        }).then(({ error }) => {
+        }).then(({ error }: { error: any }) => {
           if (!error) {
+            router.refresh()
             router.push('/calculadora')
           } else {
             router.push('/login')
