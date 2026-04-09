@@ -1,11 +1,22 @@
 import { createClient } from './client'
 import type { Branding } from '@/lib/pdf/branding'
 
+// Definición de interfaz para el registro del perfil en DB
+interface ProfileRow {
+  id: string
+  despacho: string | null
+  nombre: string | null
+  cedula: string | null
+  correo: string | null
+  direccion: string | null
+  logo_url: string | null
+  color_primario: string | null
+  porcentaje_conciliacion: number | null
+}
+
 export async function guardarPerfilSupabase(branding: Branding): Promise<boolean> {
   try {
     const supabase = createClient()
-    
-    // Usar getSession en el cliente es mucho más rápido y menos propenso a bloqueos
     const { data: { session } } = await supabase.auth.getSession()
     const user = session?.user
     if (!user) return false
@@ -46,19 +57,22 @@ export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null>
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .maybeSingle() // Usar maybeSingle es más seguro que single() si el perfil no existe
+      .maybeSingle()
 
     if (error || !data) return null
 
+    // Casteo explícito del resultado de Supabase
+    const row = data as ProfileRow
+
     return {
-      nombreDespacho: data.despacho ?? '',
-      nombreAbogado: data.nombre ?? '',
-      cedula: data.cedula ?? '',
-      correo: data.correo ?? '',
-      direccion: data.direccion ?? '',
-      logoUrl: data.logo_url ?? '',
-      colorPrimario: data.color_primario ?? '#0a0a0a',
-      porcentajeConciliacion: data.porcentaje_conciliacion ?? 50,
+      nombreDespacho: row.despacho ?? '',
+      nombreAbogado: row.nombre ?? '',
+      cedula: row.cedula ?? '',
+      correo: row.correo ?? '',
+      direccion: row.direccion ?? '',
+      logoUrl: row.logo_url ?? '',
+      colorPrimario: row.color_primario ?? '#0a0a0a',
+      porcentajeConciliacion: row.porcentaje_conciliacion ?? 50,
     }
   } catch (err) {
     console.error('Error obtenerPerfil:', err)

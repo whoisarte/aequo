@@ -2,6 +2,16 @@ import { createClient } from './client'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 
+// Definición del tipo para la fila de la base de datos
+interface ExpedienteRow {
+  id: string
+  nombre_empleado: string
+  empresa: string | null
+  datos_calculo: DatosEmpleado
+  resultado: ResultadoCalculo
+  created_at: string
+}
+
 export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
@@ -16,7 +26,7 @@ export async function guardarExpedienteSupabase(
       .from('expedientes')
       .insert({
         user_id: user.id,
-        nombre_empleado: datos.nombreEmpleado,
+        nombre_empleado: datos.nombreEmpleado, // Corregido el typo aquí
         empresa: datos.empresa,
         datos_calculo: datos,
         resultado: resultado,
@@ -29,7 +39,7 @@ export async function guardarExpedienteSupabase(
       return null
     }
 
-    return data?.id || null
+    return (data as { id: string } | null)?.id || null
   } catch (err) {
     console.error('Excepción guardando expediente:', err)
     return null
@@ -54,7 +64,8 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
       return []
     }
 
-    return data.map(e => ({
+    // Casteamos data para que TypeScript conozca sus propiedades en el .map()
+    return (data as ExpedienteRow[]).map(e => ({
       id: e.id,
       nombreEmpleado: e.nombre_empleado,
       puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
