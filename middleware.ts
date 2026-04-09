@@ -29,28 +29,42 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANTE: Refrescar la sesión
+  // Refrescar sesión (getUser es costoso pero necesario para seguridad en middleware)
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || 
-                      request.nextUrl.pathname.startsWith('/registro') ||
-                      request.nextUrl.pathname.startsWith('/confirm')
+  const pathname = request.nextUrl.pathname
+  const isAuthRoute = pathname.startsWith('/login') || 
+                      pathname.startsWith('/registro') ||
+                      pathname.startsWith('/confirm')
 
   const isProtectedRoute = ['/calculadora', '/expedientes', '/estilo', '/reporte'].some(route => 
-    request.nextUrl.pathname.startsWith(route)
+    pathname.startsWith(route)
   )
 
+  // Redirección si no hay usuario
   if (!user && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const url = new URL('/login', request.url)
+    return NextResponse.redirect(url)
   }
 
+  // Redirección si ya hay usuario pero está en login
   if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL('/calculadora', request.url))
+    const url = new URL('/calculadora', request.url)
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|auth/callback).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

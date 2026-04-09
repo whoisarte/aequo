@@ -1,7 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { SupabaseClient } from '@supabase/supabase-js'
 
-let supabaseClient: SupabaseClient | null = null
+let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
 
 export function createClient() {
   if (typeof window === 'undefined') {
@@ -20,8 +19,14 @@ export function createClient() {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
+        detectSessionInUrl: true,
+        flowType: 'pkce'
+      },
+      global: {
+        headers: {
+          'x-my-custom-header': 'aequo-app',
+        },
+      },
     }
   )
 

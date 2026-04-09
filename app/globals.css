@@ -11,8 +11,9 @@
   --text-hint: #a3a3a3;
   --accent: #0a0a0a;
   --accent-hover: #262626;
-  --radius: 6px;
-  --sidebar-width: 240px;
+  --radius: 8px;
+  --sidebar-width: 260px;
+  --header-height: 60px;
 }
 
 /* Forzar que no haya fondos de Next.js */
@@ -29,16 +30,58 @@ body::before, body::after {
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--bg-primary) !important;
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Eliminar cualquier imagen de fondo global */
-main, div, aside {
-  background-image: none !important;
+/* --- Layout Estructura --- */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 40px;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin 0.3s ease;
+}
+
+/* --- Sidebar Responsivo --- */
+.sidebar-responsive {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+  .dashboard-main {
+    margin-left: 0;
+    padding: 24px 16px;
+    padding-top: calc(var(--header-height) + 24px);
+  }
+  
+  .sidebar-responsive {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar-responsive.open {
+    transform: translateX(0);
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+}
+
+.mobile-only {
+  display: none;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 input, select, textarea, button {

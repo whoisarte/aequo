@@ -8,14 +8,9 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthProvider>
-      <div style={{ display: 'flex' }}>
+      <div className="dashboard-container">
         <Sidebar />
-        <main style={{
-          marginLeft: 'var(--sidebar-width)',
-          padding: '40px',
-          flex: 1,
-          minHeight: '100vh',
-        }}>
+        <main className="dashboard-main">
           {children}
         </main>
       </div>
