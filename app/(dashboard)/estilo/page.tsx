@@ -22,9 +22,15 @@ export default function EstiloPage() {
   async function handleGuardar() {
     setGuardando(true)
     setMensaje('')
-    const ok = await guardarPerfilSupabase(branding)
-    setMensaje(ok ? 'Configuración guardada correctamente' : 'Error al guardar. Intenta de nuevo.')
-    setGuardando(false)
+    try {
+      const ok = await guardarPerfilSupabase(branding)
+      setMensaje(ok ? 'Configuración guardada correctamente' : 'Error al guardar. Intenta de nuevo.')
+    } catch (error) {
+      console.error('Error guardando perfil:', error)
+      setMensaje('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -33,6 +39,33 @@ export default function EstiloPage() {
         <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Estilo del reporte</h1>
         <p style={{ color: 'var(--text-secondary)' }}>Configura la identidad visual de tus PDFs</p>
       </div>
+
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          Logo del despacho
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {branding.logoUrl && (
+            <img src={branding.logoUrl} alt="Logo" style={{ maxWidth: '120px', maxHeight: '60px', objectFit: 'contain', border: '1px solid var(--border)', padding: '4px', borderRadius: '4px' }} />
+          )}
+          <input 
+            type="file" 
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                const reader = new FileReader()
+                reader.onloadend = () => {
+                  setBranding({ logoUrl: reader.result as string })
+                }
+                reader.readAsDataURL(file)
+              }
+            }}
+            style={{ fontSize: '13px' }}
+          />
+          <p style={{ fontSize: '12px', color: 'var(--text-hint)' }}>Se recomienda una imagen horizontal con fondo transparente.</p>
+        </div>
+      </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>

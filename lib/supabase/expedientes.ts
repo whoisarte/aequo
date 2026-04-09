@@ -6,68 +6,84 @@ export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
 ): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+    if (!user) return null
 
-  const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
+    const { data, error } = await supabase
+      .from('expedientes')
+      .insert({
+        user_id: user.id,
+        nombre_empleado: datos.nombreEmpleado,
+        empresa: datos.empresa,
+        datos_calculo: datos,
+        resultado: resultado,
+      })
+      .select('id')
+      .maybeSingle()
 
-  const { data, error } = await supabase
-    .from('expedientes')
-    .insert({
-      user_id: user.id,
-      nombre_empleado: datos.nombreEmpleado,
-      puesto_empleado: datos.puestoEmpleado,
-      empresa: datos.empresa,
-      tipo_documento: datos.tipoDocumento,
-      periodos: datos.periodos,
-      datos_calculo: datos,
-      resultado: resultado,
-    })
-    .select('id')
-    .single()
+    if (error) {
+      console.error('Error guardando expediente:', error)
+      return null
+    }
 
-  if (error) {
-    console.error('Error guardando expediente:', error)
+    return data?.id || null
+  } catch (err) {
+    console.error('Excepción guardando expediente:', err)
     return null
   }
-
-  return data.id
 }
 
 export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+    if (!user) return []
 
-  const { data, error } = await supabase
-    .from('expedientes')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('expedientes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-  if (error || !data) return []
+    if (error || !data) {
+      if (error) console.error('Error obteniendo expedientes:', error)
+      return []
+    }
 
-  return data.map(e => ({
-    id: e.id,
-    nombreEmpleado: e.nombre_empleado,
-    puestoEmpleado: e.puesto_empleado ?? '',
-    empresa: e.empresa ?? '',
-    fechaIngreso: e.datos_calculo?.fechaIngreso ?? '',
-    fechaSalida: e.datos_calculo?.fechaSalida ?? '',
-    salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
-    tipoDocumento: e.tipo_documento ?? 'despido',
-    resultado: e.resultado,
-    creadoEn: e.created_at,
-  }))
+    return data.map(e => ({
+      id: e.id,
+      nombreEmpleado: e.nombre_empleado,
+      puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
+      empresa: e.empresa ?? '',
+      fechaIngreso: e.datos_calculo?.fechaIngreso ?? '',
+      fechaSalida: e.datos_calculo?.fechaSalida ?? '',
+      salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
+      tipoDocumento: e.datos_calculo?.tipoDocumento ?? 'despido',
+      resultado: e.resultado,
+      creadoEn: e.created_at,
+    }))
+  } catch (err) {
+    console.error('Excepción obteniendo expedientes:', err)
+    return []
+  }
 }
 
 export async function eliminarExpedienteSupabase(id: string): Promise<boolean> {
-  const supabase = createClient()
-  const { error } = await supabase
-    .from('expedientes')
-    .delete()
-    .eq('id', id)
+  try {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('expedientes')
+      .delete()
+      .eq('id', id)
 
-  return !error
+    if (error) console.error('Error eliminando expediente:', error)
+    return !error
+  } catch (err) {
+    console.error('Excepción eliminando expediente:', err)
+    return false
+  }
 }

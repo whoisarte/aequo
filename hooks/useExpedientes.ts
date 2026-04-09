@@ -31,15 +31,33 @@ export function useExpedientes() {
 
   async function cargar() {
     setCargando(true)
+    
+    // Timeout de seguridad por si Supabase no responde
+    const timeout = setTimeout(() => {
+      setCargando(false)
+    }, 5000)
 
-    // Intenta cargar desde Supabase
-    const remoto = await obtenerExpedientesSupabase()
+    try {
+      // Intenta cargar desde Supabase
+      const remoto = await obtenerExpedientesSupabase()
 
-    if (remoto.length > 0) {
-      setExpedientes(remoto)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(remoto))
-    } else {
-      // Fallback a localStorage
+      if (remoto && remoto.length > 0) {
+        setExpedientes(remoto)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(remoto))
+      } else {
+        // Fallback a localStorage si no hay remoto o está vacío
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) {
+          try {
+            setExpedientes(JSON.parse(raw))
+          } catch {
+            setExpedientes([])
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando expedientes:', error)
+      // Fallback a localStorage en caso de error de red/auth
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         try {
@@ -48,9 +66,10 @@ export function useExpedientes() {
           setExpedientes([])
         }
       }
+    } finally {
+      clearTimeout(timeout)
+      setCargando(false)
     }
-
-    setCargando(false)
   }
 
   async function guardar(datos: DatosEmpleado, resultado: ResultadoCalculo) {
@@ -68,13 +87,17 @@ export function useExpedientes() {
       creadoEn: new Date().toISOString(),
     }
 
-    // Guarda localmente primero
+    // Actualiza UI inmediatamente (Optimistic UI)
     const actualizados = [nuevo, ...expedientes]
     setExpedientes(actualizados)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados))
 
     // Intenta sincronizar con Supabase
-    await guardarExpedienteSupabase(datos, resultado)
+    try {
+      await guardarExpedienteSupabase(datos, resultado)
+    } catch (error) {
+      console.error('Error sincronizando con Supabase:', error)
+    }
   }
 
   async function eliminar(id: string) {

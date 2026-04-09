@@ -33,6 +33,15 @@ export function aplicarEncabezado(
   const margen = 20
   const anchoDoc = 215.9
 
+  // Logo a la izquierda
+  if (branding.logoUrl) {
+    try {
+      doc.addImage(branding.logoUrl, 'PNG', margen, 10, 40, 15, undefined, 'FAST')
+    } catch (e) {
+      console.warn('Error al cargar logo en PDF:', e)
+    }
+  }
+
   if (branding.nombreDespacho) {
     doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')

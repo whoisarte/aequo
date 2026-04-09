@@ -17,19 +17,37 @@ export default function LoginPage() {
     if (window.location.hash.includes('access_token')) {
       router.push('/confirm' + window.location.hash)
     }
-  }, [])
+  }, [router])
 
-  async function handleLogin() {
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    if (loading) return
+    
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
-    } else {
-      router.push('/calculadora')
+    
+    try {
+      const supabase = createClient()
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      })
+      
+      if (loginError) {
+        setError(loginError.message)
+        setLoading(false)
+      } else if (data.session) {
+        // Forzamos un refresh para que el middleware vea las nuevas cookies
+        router.refresh()
+        router.push('/calculadora')
+      } else {
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Error inesperado al intentar entrar.')
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -40,17 +58,20 @@ export default function LoginPage() {
       justifyContent: 'center',
       background: 'var(--bg-surface)',
     }}>
-      <div style={{
-        background: 'var(--bg-primary)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '40px',
-        width: '100%',
-        maxWidth: '400px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '24px',
-      }}>
+      <form 
+        onSubmit={handleLogin}
+        style={{
+          background: 'var(--bg-primary)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          padding: '40px',
+          width: '100%',
+          maxWidth: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+        }}
+      >
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Aequo</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Inicia sesión para continuar</p>
@@ -64,6 +85,7 @@ export default function LoginPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="tu@correo.com"
+            required
           />
           <Input
             label="Contraseña"
@@ -72,6 +94,7 @@ export default function LoginPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="••••••••"
+            required
           />
         </div>
 
@@ -79,7 +102,7 @@ export default function LoginPage() {
           <p style={{ color: '#dc2626', fontSize: '13px' }}>{error}</p>
         )}
 
-        <Button type="submit" onClick={handleLogin} disabled={loading} fullWidth>
+        <Button type="submit" disabled={loading} fullWidth>
           {loading ? 'Entrando...' : 'Iniciar sesión'}
         </Button>
 
@@ -89,7 +112,7 @@ export default function LoginPage() {
             Regístrate
           </a>
         </p>
-      </div>
+      </form>
     </div>
   )
 }

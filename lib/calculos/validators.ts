@@ -18,8 +18,8 @@ export function validarDatos(datos: DatosEmpleado): ErroresValidacion {
   if (datos.fechaIngreso && datos.fechaSalida) {
     const ingreso = new Date(datos.fechaIngreso)
     const salida = new Date(datos.fechaSalida)
-    if (salida <= ingreso) {
-      errores.fechaSalida = 'La fecha de salida debe ser posterior al ingreso'
+    if (salida < ingreso) {
+      errores.fechaSalida = 'La fecha de salida debe ser igual o posterior al ingreso'
     }
   }
   if (!datos.periodos || datos.periodos.length === 0) {

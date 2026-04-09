@@ -1,11 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const protectedRoutes = ['/calculadora', '/expedientes', '/estilo', '/reporte']
-const authRoutes = ['/login', '/registro', '/confirm']
-
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +18,9 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({
+            request,
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -28,17 +29,18 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // IMPORTANTE: Refrescar la sesión
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtected = protectedRoutes.some(route =>
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || 
+                      request.nextUrl.pathname.startsWith('/registro') ||
+                      request.nextUrl.pathname.startsWith('/confirm')
+
+  const isProtectedRoute = ['/calculadora', '/expedientes', '/estilo', '/reporte'].some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
 
-  const isAuthRoute = authRoutes.some(route =>
-    request.nextUrl.pathname.startsWith(route)
-  )
-
-  if (!user && isProtected) {
+  if (!user && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

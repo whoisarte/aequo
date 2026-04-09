@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { useCalculadora } from '@/hooks/useCalculadora'
 import { useBrandingStore } from '@/store/brandingStore'
 import { useExpedientes } from '@/hooks/useExpedientes'
@@ -11,6 +12,7 @@ import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
 
 export default function CalculadoraPage() {
   const { branding } = useBrandingStore()
+  const resultadosRef = useRef<HTMLDivElement>(null)
   const {
     datos, resultado, errores,
     actualizarDato, generarAniosDisponibles,
@@ -18,6 +20,15 @@ export default function CalculadoraPage() {
     calcular, resetear,
   } = useCalculadora(branding.porcentajeConciliacion)
   const { guardar } = useExpedientes()
+
+  // Efecto para hacer scroll automático cuando aparece el resultado
+  useEffect(() => {
+    if (resultado && resultadosRef.current) {
+      setTimeout(() => {
+        resultadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }, [resultado])
 
   function handleDescargar() {
     if (!resultado) return
@@ -30,24 +41,24 @@ export default function CalculadoraPage() {
   }
 
   function handleWhatsApp() {
-  if (!resultado) return
-  compartirWhatsApp(
-    datos.nombreEmpleado,
-    resultado.finiquito.total,
-    resultado.liquidacion.total,
-    datos.tipoDocumento
-  )
-}
+    if (!resultado) return
+    compartirWhatsApp(
+      datos.nombreEmpleado,
+      resultado.finiquito.total,
+      resultado.liquidacion.total,
+      datos.tipoDocumento
+    )
+  }
 
-function handleCorreo() {
-  if (!resultado) return
-  compartirCorreo(
-    datos.nombreEmpleado,
-    resultado.finiquito.total,
-    resultado.liquidacion.total,
-    datos.tipoDocumento
-  )
-}
+  function handleCorreo() {
+    if (!resultado) return
+    compartirCorreo(
+      datos.nombreEmpleado,
+      resultado.finiquito.total,
+      resultado.liquidacion.total,
+      datos.tipoDocumento
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
@@ -68,7 +79,10 @@ function handleCorreo() {
       />
 
       {resultado && (
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '40px' }}>
+        <div 
+          ref={resultadosRef}
+          style={{ borderTop: '1px solid var(--border)', paddingTop: '40px', scrollMarginTop: '20px' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '600' }}>Resultado comparativo</h2>
             <div style={{ display: 'flex', gap: '8px' }}>

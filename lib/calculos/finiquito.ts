@@ -5,78 +5,109 @@ export function calcularFiniquito(
   porcentajeConciliacion: number = 50
 ): ResultadoFiniquito {
   const factor = porcentajeConciliacion / 100
-  const ingreso = new Date(datos.fechaIngreso)
-  const salida = new Date(datos.fechaSalida)
-  const diffMs = salida.getTime() - ingreso.getTime()
-  const diasTotales = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  const aniosCompletos = Math.floor(diasTotales / 365)
+  const ingreso = new Date(datos.fechaIngreso + 'T12:00:00')
+  const salida = new Date(datos.fechaSalida + 'T12:00:00')
 
   const periodos: ResultadoPeriodo[] = datos.periodos.map(periodo => {
-    const esUltimoAnio = periodo.anio === new Date(datos.fechaSalida).getFullYear()
-    const inicioAnio = new Date(ingreso)
-    inicioAnio.setFullYear(periodo.anio - 1)
-    const finAnio = new Date(inicioAnio)
-    finAnio.setFullYear(inicioAnio.getFullYear() + 1)
+    const desglose: DesglosePaso[] = []
+    let vacaciones = 0
+    let primaVacacional = 0
+    let aguinaldo = 0
+    let diasVacEfectivos = 0
+    let aguinaldoDias = 0
 
-    const diasDelAnio = Math.floor((finAnio.getTime() - inicioAnio.getTime()) / (1000 * 60 * 60 * 24))
-    const diasEnPeriodo = esUltimoAnio
-      ? Math.floor((salida.getTime() - inicioAnio.getTime()) / (1000 * 60 * 60 * 24))
-      : diasDelAnio
-    const fraccion = diasEnPeriodo / diasDelAnio
+    const salarioDiario = periodo.salarioDiario
 
-    const aniosTrabajados = periodo.anio - ingreso.getFullYear()
-    const diasVacaciones = aniosTrabajados >= 1 ? 12 + (aniosTrabajados - 1) * 2 : 12
+    // --- AGUINALDO PROPORCIONAL ---
+    if (periodo.aplicaAguinaldo) {
+      const anioActual = periodo.anio
+      const inicioAguinaldo = new Date(anioActual, 0, 1, 12, 0, 0)
+      const fechaInicioReal = ingreso > inicioAguinaldo ? ingreso : inicioAguinaldo
+      const fechaFinReal = salida
+      
+      // Solo calculamos si el año de este periodo coincide con el año de salida o si es un periodo pasado completo
+      const esAnioSalida = anioActual === salida.getFullYear()
+      
+      if (esAnioSalida) {
+        const diffMs = fechaFinReal.getTime() - fechaInicioReal.getTime()
+        const diasLaboradosAnio = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1)
+        const diasDelAnio = (anioActual % 4 === 0 && (anioActual % 100 !== 0 || anioActual % 400 === 0)) ? 366 : 365
+        
+        aguinaldoDias = +(15 * (diasLaboradosAnio / diasDelAnio)).toFixed(2)
+        aguinaldo = +(aguinaldoDias * salarioDiario).toFixed(2)
+        
+        desglose.push({
+          concepto: `Aguinaldo proporcional ${anioActual}`,
+          dias: `${diasLaboradosAnio} días laborados`,
+          total: aguinaldo,
+          propuestaConciliacion: +(aguinaldo * factor).toFixed(2),
+        })
+      }
+    }
 
-    const vacaciones = periodo.aplicaVacaciones
-      ? Math.max(0, +((diasVacaciones * fraccion - periodo.diasVacacionesUsados) * periodo.salarioDiario).toFixed(2))
-      : 0
-    const diasVacEfectivos = periodo.aplicaVacaciones
-      ? +(diasVacaciones * fraccion - periodo.diasVacacionesUsados).toFixed(1)
-      : 0
+    // --- VACACIONES Y PRIMA VACACIONAL ---
+    if (periodo.aplicaVacaciones || periodo.aplicaPrimaVacacional) {
+      const anioRelativo = periodo.anio - ingreso.getFullYear()
+      if (anioRelativo >= 0) {
+        // Determinamos cuántos días le tocan por ley en ese año de servicio
+        // Ley 2026: 12 dias primer año, +2 cada año hasta 20.
+        let diasLey = 12
+        if (anioRelativo === 0) diasLey = 12
+        else if (anioRelativo < 5) diasLey = 12 + (anioRelativo * 2)
+        else {
+          const bloques5 = Math.floor((anioRelativo - 5) / 5)
+          diasLey = 20 + ((bloques5 + 1) * 2)
+        }
 
-    const primaVacacional = periodo.aplicaPrimaVacacional
-      ? +(vacaciones * 0.25).toFixed(2)
-      : 0
+        // Calculamos la proporción del año de aniversario
+        const inicioAniversario = new Date(ingreso)
+        inicioAniversario.setFullYear(ingreso.getFullYear() + anioRelativo)
+        const finAniversario = new Date(inicioAniversario)
+        finAniversario.setFullYear(inicioAniversario.getFullYear() + 1)
 
-    const aguinaldoDias = +(15 * fraccion).toFixed(1)
-    const aguinaldo = periodo.aplicaAguinaldo
-      ? +(aguinaldoDias * periodo.salarioDiario).toFixed(2)
-      : 0
+        const fechaInicioPeriodo = inicioAniversario
+        const fechaFinPeriodo = salida < finAniversario ? salida : finAniversario
+
+        if (fechaFinPeriodo > fechaInicioPeriodo) {
+          const diffMs = fechaFinPeriodo.getTime() - fechaInicioPeriodo.getTime()
+          const diasEnAniversario = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
+          const diasTotalesAniversario = Math.floor((finAniversario.getTime() - inicioAniversario.getTime()) / (1000 * 60 * 60 * 24))
+          
+          const proporcion = diasEnAniversario / diasTotalesAniversario
+          diasVacEfectivos = +(diasLey * proporcion).toFixed(2)
+          
+          // Restar días ya usados si es el periodo actual
+          const diasPendientes = Math.max(0, diasVacEfectivos - periodo.diasVacacionesUsados)
+          
+          if (periodo.aplicaVacaciones) {
+            vacaciones = +(diasPendientes * salarioDiario).toFixed(2)
+            desglose.push({
+              concepto: `Vacaciones proporcionales ${periodo.anio}`,
+              dias: `${diasPendientes.toFixed(2)} días`,
+              total: vacaciones,
+              propuestaConciliacion: +(vacaciones * factor).toFixed(2),
+            })
+          }
+
+          if (periodo.aplicaPrimaVacacional) {
+            primaVacacional = +(vacaciones * 0.25).toFixed(2)
+            desglose.push({
+              concepto: `Prima vacacional (25%) ${periodo.anio}`,
+              dias: '25%',
+              total: primaVacacional,
+              propuestaConciliacion: +(primaVacacional * factor).toFixed(2),
+            })
+          }
+        }
+      }
+    }
 
     const subtotal = +(vacaciones + primaVacacional + aguinaldo).toFixed(2)
-
-    const desglose: DesglosePaso[] = []
-
-    if (periodo.aplicaVacaciones) {
-      desglose.push({
-        concepto: `Vacaciones ${periodo.anio}`,
-        dias: String(diasVacEfectivos),
-        total: vacaciones,
-        propuestaConciliacion: +(vacaciones * factor).toFixed(2),
-      })
-    }
-    if (periodo.aplicaPrimaVacacional) {
-      desglose.push({
-        concepto: `Prima vacacional ${periodo.anio}`,
-        dias: '25%',
-        total: primaVacacional,
-        propuestaConciliacion: +(primaVacacional * factor).toFixed(2),
-      })
-    }
-    if (periodo.aplicaAguinaldo) {
-      desglose.push({
-        concepto: `Aguinaldo ${periodo.anio}`,
-        dias: String(aguinaldoDias),
-        total: aguinaldo,
-        propuestaConciliacion: +(aguinaldo * factor).toFixed(2),
-      })
-    }
-
     return { anio: periodo.anio, vacaciones, primaVacacional, aguinaldo, subtotal, desglose }
   })
 
-  const desglose: DesglosePaso[] = periodos.flatMap(p => p.desglose)
+  const desgloseTotal: DesglosePaso[] = periodos.flatMap(p => p.desglose)
   const total = +periodos.reduce((a, b) => a + b.subtotal, 0).toFixed(2)
 
-  return { periodos, total, desglose }
+  return { periodos, total, desglose: desgloseTotal }
 }

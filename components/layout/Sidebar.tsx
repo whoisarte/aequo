@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
@@ -12,18 +12,48 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
 
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
+  const handleLogout = async () => {
+    console.log('Botón de cerrar sesión presionado');
+    
+    try {
+      const supabase = createClient();
+      console.log('Cliente de Supabase obtenido, intentando signOut...');
+      
+      // Intentamos cerrar sesión pero no bloqueamos el hilo con await si tarda mucho
+      supabase.auth.signOut().then(() => {
+        console.log('Supabase: Sesión cerrada correctamente');
+      }).catch(err => {
+        console.error('Supabase: Error al cerrar sesión:', err);
+      });
+
+      // Limpieza manual inmediata
+      console.log('Limpiando localStorage y cookies...');
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Borrar cookies manualmente
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      }
+
+      console.log('Redirigiendo a /login...');
+      window.location.href = '/login';
+      
+    } catch (error) {
+      console.error('Error crítico en handleLogout:', error);
+      window.location.href = '/login';
+    }
+  };
 
   return (
     <aside style={{
       width: 'var(--sidebar-width)',
-      minHeight: '100vh',
+      height: '100vh',
       borderRight: '1px solid var(--border)',
       padding: '24px 16px',
       display: 'flex',
@@ -33,6 +63,7 @@ export default function Sidebar() {
       top: 0,
       left: 0,
       background: 'var(--bg-primary)',
+      zIndex: 9999, // Aseguramos que esté por encima de todo
     }}>
       <div style={{
         padding: '0 8px 24px',
@@ -44,7 +75,7 @@ export default function Sidebar() {
         </span>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item) => {
           const activo = pathname === item.href
           return (
@@ -65,24 +96,31 @@ export default function Sidebar() {
             </Link>
           )
         })}
-      </div>
+      </nav>
 
-      <button
-        onClick={handleLogout}
-        style={{
-          padding: '8px',
-          borderRadius: 'var(--radius)',
-          color: 'var(--text-secondary)',
-          background: 'transparent',
-          border: 'none',
-          fontSize: '14px',
-          cursor: 'pointer',
-          textAlign: 'left',
-          marginTop: 'auto',
-        }}
-      >
-        Cerrar sesión
-      </button>
+      <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+        <button
+          type="button"
+          onClick={() => {
+            console.log('Click detectado en el botón');
+            handleLogout();
+          }}
+          style={{
+            width: '100%',
+            padding: '8px',
+            borderRadius: 'var(--radius)',
+            color: 'var(--text-secondary)',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '14px',
+            fontWeight: '400',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          Cerrar sesión
+        </button>
+      </div>
     </aside>
   )
 }
