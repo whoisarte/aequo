@@ -1,9 +1,10 @@
 import { createClient } from './client'
-import type { PostgrestError } from '@supabase/supabase-js'
+import type { PostgrestError, Session } from '@supabase/supabase-js'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 
 const SUPABASE_TIMEOUT_MS = 8000
+const INITIAL_SESSION_WAIT_MS = 1500
 
 function timeoutError(message: string): PostgrestError {
   return {
@@ -44,16 +45,58 @@ async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> 
   })
 }
 
+async function getSessionWithInitialWait(supabase: ReturnType<typeof createClient>) {
+  type SessionResult =
+    | { data: { session: Session }; error: null }
+    | { data: { session: null }; error: null }
+    | { data: { session: null }; error: unknown }
+
+  let sessionResult: SessionResult = await withTimeout(supabase.auth.getSession(), {
+    data: { session: null },
+    error: null,
+  })
+
+  if (!sessionResult.data.session) {
+    sessionResult = await new Promise<SessionResult>((resolve) => {
+      let settled = false
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (settled || event !== 'INITIAL_SESSION') return
+        settled = true
+        clearTimeout(timer)
+        subscription.unsubscribe()
+        if (session) {
+          resolve({
+            data: { session },
+            error: null,
+          })
+        } else {
+          resolve({
+            data: { session: null },
+            error: null,
+          })
+        }
+      })
+
+      const timer = setTimeout(() => {
+        if (settled) return
+        settled = true
+        subscription.unsubscribe()
+        resolve(sessionResult)
+      }, INITIAL_SESSION_WAIT_MS)
+    })
+  }
+
+  return sessionResult
+}
+
 export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
 ): Promise<string | null> {
   try {
     const supabase = createClient()
-    const sessionResult = await withTimeout(supabase.auth.getSession(), {
-      data: { session: null },
-      error: null,
-    })
+    const sessionResult = await getSessionWithInitialWait(supabase)
     const { data: { session } } = sessionResult
     if (!session?.user) return null
 
@@ -85,10 +128,7 @@ export async function guardarExpedienteSupabase(
 export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
   try {
     const supabase = createClient()
-    const sessionResult = await withTimeout(supabase.auth.getSession(), {
-      data: { session: null },
-      error: null,
-    })
+    const sessionResult = await getSessionWithInitialWait(supabase)
     const { data: { session } } = sessionResult
     if (!session?.user) return []
 

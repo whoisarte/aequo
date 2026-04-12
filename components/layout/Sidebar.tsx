@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
@@ -13,35 +13,32 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    setIsOpen(false)
-  }, [pathname])
+  const [cerrandoSesion, setCerrandoSesion] = useState(false)
+  const [errorLogout, setErrorLogout] = useState('')
 
   const handleLogout = async () => {
+    if (cerrandoSesion) return
+
+    setCerrandoSesion(true)
+    setErrorLogout('')
+
     try {
       const supabase = createClient()
-      
-      // Lanzar el cierre de sesión sin bloquear por si el servidor tarda
-      supabase.auth.signOut().catch(() => {})
+      const { error } = await supabase.auth.signOut()
 
-      // Limpieza manual total de sesión en navegador
-      localStorage.clear()
-      sessionStorage.clear()
-      
-      const cookies = document.cookie.split(";")
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i]
-        const eqPos = cookie.indexOf("=")
-        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/"
+      if (error) {
+        setErrorLogout('No se pudo cerrar la sesión. Intenta nuevamente.')
+        return
       }
 
-      // Forzar redirección y refresco de página completo
-      window.location.href = '/login'
-    } catch (error) {
-      window.location.href = '/login'
+      router.refresh()
+      router.push('/login')
+    } catch {
+      setErrorLogout('No se pudo cerrar la sesión. Intenta nuevamente.')
+    } finally {
+      setCerrandoSesion(false)
     }
   }
 
@@ -127,6 +124,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsOpen(false)}
                 style={{
                   padding: '10px 12px',
                   borderRadius: 'var(--radius)',
@@ -147,8 +145,14 @@ export default function Sidebar() {
         </nav>
 
         <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+          {errorLogout && (
+            <p style={{ fontSize: '12px', color: '#b91c1c', marginBottom: '8px' }}>
+              {errorLogout}
+            </p>
+          )}
           <button
             onClick={handleLogout}
+            disabled={cerrandoSesion}
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -158,13 +162,14 @@ export default function Sidebar() {
               border: 'none',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer',
+              cursor: cerrandoSesion ? 'not-allowed' : 'pointer',
+              opacity: cerrandoSesion ? 0.6 : 1,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
             }}
           >
-            Cerrar sesión
+            {cerrandoSesion ? 'Cerrando sesión...' : 'Cerrar sesión'}
           </button>
         </div>
       </aside>

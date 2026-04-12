@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { getCachedUserId, getExpedientesStorageKey, setCachedUserId } from '@/lib/auth/cache'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
+import { createClient } from '@/lib/supabase/client'
 import {
   guardarExpedienteSupabase,
   obtenerExpedientesSupabase,
@@ -19,7 +21,6 @@ export interface Expediente {
   creadoEn: string
 }
 
-const STORAGE_KEY = 'aequo_expedientes'
 const LOAD_TIMEOUT_MS = 10000
 
 async function obtenerExpedientesConTimeout(): Promise<Expediente[]> {
@@ -58,22 +59,79 @@ export function useExpedientes() {
   const [expedientes, setExpedientes] = useState<Expediente[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [storageKey, setStorageKey] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   const leerExpedientesLocales = useCallback((): Expediente[] => {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!storageKey) return []
+
+    const raw = localStorage.getItem(storageKey)
     if (!raw) return []
 
     try {
       return JSON.parse(raw) as Expediente[]
     } catch (error) {
       console.error('Error leyendo expedientes locales:', error)
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(storageKey)
       return []
+    }
+  }, [storageKey])
+
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+
+    const cachedUserId = getCachedUserId()
+    if (cachedUserId) {
+      setStorageKey(getExpedientesStorageKey(cachedUserId))
+    }
+    setIsHydrated(true)
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+
+      if (session?.user.id) {
+        setCachedUserId(session.user.id)
+        setStorageKey(getExpedientesStorageKey(session.user.id))
+      } else {
+        setStorageKey(null)
+        setExpedientes([])
+        setError('')
+      }
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
     }
   }, [])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  useEffect(() => {
+    if (!isHydrated) return
+
+    if (!storageKey) {
+      setCargando(false)
+      return
+    }
+
+    const locales = leerExpedientesLocales()
+    if (locales.length > 0) {
+      setExpedientes(locales)
+    }
+    setCargando(false)
+  }, [isHydrated, leerExpedientesLocales, storageKey])
+
+  const cargar = useCallback(async (background = false) => {
+    if (!storageKey) {
+      setExpedientes([])
+      setError('')
+      setCargando(false)
+      return
+    }
+
+    if (!background) {
+      setCargando(true)
+    }
     setError('')
 
     try {
@@ -81,7 +139,7 @@ export function useExpedientes() {
 
       if (remoto && remoto.length > 0) {
         setExpedientes(remoto)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(remoto))
+        localStorage.setItem(storageKey, JSON.stringify(remoto))
       } else {
         const locales = leerExpedientesLocales()
         setExpedientes(locales)
@@ -96,13 +154,16 @@ export function useExpedientes() {
           : 'No se pudieron cargar los expedientes. Intenta de nuevo.'
       )
     } finally {
-      setCargando(false)
+      if (!background) {
+        setCargando(false)
+      }
     }
-  }, [leerExpedientesLocales])
+  }, [leerExpedientesLocales, storageKey])
 
   useEffect(() => {
-    void cargar()
-  }, [cargar])
+    if (!isHydrated || !storageKey) return
+    void cargar(leerExpedientesLocales().length > 0)
+  }, [cargar, isHydrated, leerExpedientesLocales, storageKey])
 
   async function guardar(datos: DatosEmpleado, resultado: ResultadoCalculo) {
     const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
@@ -121,7 +182,9 @@ export function useExpedientes() {
 
     const actualizados = [nuevo, ...expedientes]
     setExpedientes(actualizados)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados))
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(actualizados))
+    }
 
     await guardarExpedienteSupabase(datos, resultado)
   }
@@ -129,7 +192,9 @@ export function useExpedientes() {
   async function eliminar(id: string) {
     const actualizados = expedientes.filter(e => e.id !== id)
     setExpedientes(actualizados)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados))
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(actualizados))
+    }
     await eliminarExpedienteSupabase(id)
   }
 

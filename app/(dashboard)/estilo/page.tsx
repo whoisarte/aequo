@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getCachedBranding, getCachedUserId } from '@/lib/auth/cache'
 import { useBrandingStore } from '@/store/brandingStore'
 import { guardarPerfilSupabase, obtenerPerfilSupabase } from '@/lib/supabase/perfil'
 import Input from '@/components/ui/Input'
@@ -15,12 +16,16 @@ export default function EstiloPage() {
   const isMounted = useRef(false)
   const isLoadingProfile = useRef(false)
   const clearMessageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retryLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasCachedBranding = useRef(false)
 
-  const cargarPerfil = useCallback(async () => {
+  const cargarPerfil = useCallback(async (background = false) => {
     if (isLoadingProfile.current) return
 
     isLoadingProfile.current = true
-    setCargando(true)
+    if (!background) {
+      setCargando(true)
+    }
     setErrorCarga('')
 
     try {
@@ -37,6 +42,15 @@ export default function EstiloPage() {
       }
 
       if (resultado.status === 'no-session') {
+        const cachedUserId = getCachedUserId()
+        if (cachedUserId) {
+          retryLoadTimer.current = setTimeout(() => {
+            if (isMounted.current) {
+              void cargarPerfil(true)
+            }
+          }, 800)
+          return
+        }
         setErrorCarga('Tu sesión no está disponible en este momento. Intenta nuevamente.')
         return
       }
@@ -49,7 +63,7 @@ export default function EstiloPage() {
       }
     } finally {
       isLoadingProfile.current = false
-      if (isMounted.current) {
+      if (isMounted.current && !background) {
         setCargando(false)
       }
     }
@@ -57,15 +71,29 @@ export default function EstiloPage() {
 
   useEffect(() => {
     isMounted.current = true
-    void cargarPerfil()
+
+    const userId = getCachedUserId()
+    if (userId) {
+      const brandingCacheado = getCachedBranding(userId)
+      if (brandingCacheado) {
+        hasCachedBranding.current = true
+        setBranding(brandingCacheado)
+        setCargando(false)
+      }
+    }
+
+    void cargarPerfil(hasCachedBranding.current)
 
     return () => {
       isMounted.current = false
       if (clearMessageTimer.current) {
         clearTimeout(clearMessageTimer.current)
       }
+      if (retryLoadTimer.current) {
+        clearTimeout(retryLoadTimer.current)
+      }
     }
-  }, [cargarPerfil])
+  }, [cargarPerfil, setBranding])
 
   async function handleGuardar() {
     if (guardando) return

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getCachedUserId, setCachedBranding } from '@/lib/auth/cache'
 import type { Branding } from '@/lib/pdf/branding'
 
 interface BrandingStore {
@@ -21,6 +22,13 @@ const brandingInicial: Branding = {
 export const useBrandingStore = create<BrandingStore>((set) => ({
   branding: brandingInicial,
   setBranding: (partial) =>
-    set((state) => ({ branding: { ...state.branding, ...partial } })),
+    set((state) => {
+      const branding = { ...state.branding, ...partial }
+      const userId = getCachedUserId()
+      if (userId) {
+        setCachedBranding(userId, branding)
+      }
+      return { branding }
+    }),
   resetear: () => set({ branding: brandingInicial }),
 }))

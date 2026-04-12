@@ -8,33 +8,47 @@ export default function ConfirmPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
+    let active = true
 
-    const hash = window.location.hash
-    if (hash) {
+    async function confirmarSesionDesdeHash() {
+      const hash = window.location.hash
+      if (!hash) {
+        router.push('/login')
+        return
+      }
+
       const params = new URLSearchParams(hash.substring(1))
       const accessToken = params.get('access_token')
       const refreshToken = params.get('refresh_token')
 
-      if (accessToken && refreshToken) {
-        supabase.auth.setSession({
+      if (!accessToken || !refreshToken) {
+        router.push('/login')
+        return
+      }
+
+      const supabase = createClient()
+      const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
-        }).then(({ error }: { error: any }) => {
-          if (!error) {
-            router.refresh()
-            router.push('/calculadora')
-          } else {
-            router.push('/login')
-          }
         })
-      } else {
+
+      if (!active) return
+
+      if (error) {
         router.push('/login')
+        return
       }
-    } else {
-      router.push('/login')
+
+      router.refresh()
+      router.push('/calculadora')
     }
-  }, [])
+
+    void confirmarSesionDesdeHash()
+
+    return () => {
+      active = false
+    }
+  }, [router])
 
   return (
     <div style={{
