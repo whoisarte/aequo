@@ -1,8 +1,29 @@
 import { createClient } from './client'
+import type { PostgrestError } from '@supabase/supabase-js'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 
 const SUPABASE_TIMEOUT_MS = 8000
+
+function timeoutError(message: string): PostgrestError {
+  return {
+    name: 'PostgrestError',
+    message,
+    details: '',
+    hint: '',
+    code: 'TIMEOUT',
+  }
+}
+
+function timeoutFailure(message: string) {
+  return {
+    data: null,
+    error: timeoutError(message),
+    count: null,
+    status: 408,
+    statusText: 'Request Timeout',
+  }
+}
 
 async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -16,8 +37,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> 
       .then((value) => {
         if (timer) clearTimeout(timer)
         resolve(value)
-      })
-      .catch(() => {
+      }, () => {
         if (timer) clearTimeout(timer)
         resolve(fallback)
       })
@@ -49,7 +69,7 @@ export async function guardarExpedienteSupabase(
         })
         .select('id')
         .maybeSingle(),
-      { data: null, error: new Error('Timeout guardando expediente') }
+      timeoutFailure('Timeout guardando expediente')
     )
 
     const { data, error } = response
@@ -78,7 +98,7 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false }),
-      { data: null, error: new Error('Timeout obteniendo expedientes') }
+      timeoutFailure('Timeout obteniendo expedientes')
     )
 
     const { data, error } = response
@@ -121,7 +141,13 @@ export async function eliminarExpedienteSupabase(id: string): Promise<boolean> {
     const supabase = createClient()
     const response = await withTimeout(
       supabase.from('expedientes').delete().eq('id', id),
-      { error: new Error('Timeout eliminando expediente') }
+      {
+        data: null,
+        error: timeoutError('Timeout eliminando expediente'),
+        count: null,
+        status: 408,
+        statusText: 'Request Timeout',
+      }
     )
     const { error } = response
     return !error

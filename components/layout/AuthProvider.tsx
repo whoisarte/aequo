@@ -18,7 +18,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       async (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'SIGNED_IN' && session) {
           const perfil = await obtenerPerfilSupabase()
-          if (perfil) setBranding(perfil)
+          if (perfil.status === 'ok') {
+            setBranding(perfil.perfil)
+          }
         }
         if (event === 'SIGNED_OUT') {
           router.refresh()
