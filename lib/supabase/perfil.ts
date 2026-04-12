@@ -1,6 +1,7 @@
 import { createClient } from './client'
 import type { PostgrestError, Session } from '@supabase/supabase-js'
 import type { Branding } from '@/lib/pdf/branding'
+import type { ProfileRow } from './types'
 
 const SUPABASE_TIMEOUT_MS = 8000
 const INITIAL_SESSION_WAIT_MS = 1500
@@ -184,14 +185,14 @@ export async function obtenerPerfilSupabase(): Promise<PerfilEstado> {
     return {
       status: 'ok',
       perfil: {
-        nombreDespacho: data.despacho ?? '',
-        nombreAbogado: data.nombre ?? '',
-        cedula: data.cedula ?? '',
-        correo: data.correo ?? '',
-        direccion: data.direccion ?? '',
-        logoUrl: data.logo_url ?? '',
-        colorPrimario: data.color_primario ?? '#0a0a0a',
-        porcentajeConciliacion: data.porcentaje_conciliacion ?? 50,
+        nombreDespacho: (data as ProfileRow).despacho ?? '',
+        nombreAbogado: (data as ProfileRow).nombre ?? '',
+        cedula: (data as ProfileRow).cedula ?? '',
+        correo: (data as ProfileRow).correo ?? '',
+        direccion: (data as ProfileRow).direccion ?? '',
+        logoUrl: (data as ProfileRow).logo_url ?? '',
+        colorPrimario: (data as ProfileRow).color_primario ?? '#0a0a0a',
+        porcentajeConciliacion: (data as ProfileRow).porcentaje_conciliacion ?? 50,
       },
     }
   } catch (err) {

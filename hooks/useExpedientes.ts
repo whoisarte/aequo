@@ -19,6 +19,7 @@ export interface Expediente {
   tipoDocumento: string
   resultado: ResultadoCalculo
   creadoEn: string
+  pendiente?: boolean
 }
 
 const LOAD_TIMEOUT_MS = 10000
@@ -167,8 +168,9 @@ export function useExpedientes() {
 
   async function guardar(datos: DatosEmpleado, resultado: ResultadoCalculo) {
     const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
-    const nuevo: Expediente = {
-      id: crypto.randomUUID(),
+    const tempId = crypto.randomUUID()
+    const nuevoTemporal: Expediente = {
+      id: tempId,
       nombreEmpleado: datos.nombreEmpleado,
       puestoEmpleado: datos.puestoEmpleado,
       empresa: datos.empresa,
@@ -178,15 +180,24 @@ export function useExpedientes() {
       tipoDocumento: datos.tipoDocumento,
       resultado,
       creadoEn: new Date().toISOString(),
+      pendiente: true,
     }
 
-    const actualizados = [nuevo, ...expedientes]
+    const actualizados = [nuevoTemporal, ...expedientes]
     setExpedientes(actualizados)
     if (storageKey) {
       localStorage.setItem(storageKey, JSON.stringify(actualizados))
     }
 
-    await guardarExpedienteSupabase(datos, resultado)
+    const remoto = await guardarExpedienteSupabase(datos, resultado)
+
+    if (!remoto) return
+
+    const sincronizados = [remoto, ...actualizados.filter((expediente) => expediente.id !== tempId)]
+    setExpedientes(sincronizados)
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(sincronizados))
+    }
   }
 
   async function eliminar(id: string) {

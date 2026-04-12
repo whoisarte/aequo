@@ -2,6 +2,7 @@ import { createClient } from './client'
 import type { PostgrestError, Session } from '@supabase/supabase-js'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
+import type { ExpedienteRow } from './types'
 
 const SUPABASE_TIMEOUT_MS = 8000
 const INITIAL_SESSION_WAIT_MS = 1500
@@ -23,6 +24,21 @@ function timeoutFailure(message: string) {
     count: null,
     status: 408,
     statusText: 'Request Timeout',
+  }
+}
+
+function mapExpedienteRow(e: ExpedienteRow): Expediente {
+  return {
+    id: e.id,
+    nombreEmpleado: e.nombre_empleado,
+    puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
+    empresa: e.empresa ?? '',
+    fechaIngreso: e.datos_calculo?.fechaIngreso ?? '',
+    fechaSalida: e.datos_calculo?.fechaSalida ?? '',
+    salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
+    tipoDocumento: e.datos_calculo?.tipoDocumento ?? 'despido',
+    resultado: e.resultado,
+    creadoEn: e.created_at,
   }
 }
 
@@ -93,7 +109,7 @@ async function getSessionWithInitialWait(supabase: ReturnType<typeof createClien
 export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
-): Promise<string | null> {
+): Promise<Expediente | null> {
   try {
     const supabase = createClient()
     const sessionResult = await getSessionWithInitialWait(supabase)
@@ -110,15 +126,15 @@ export async function guardarExpedienteSupabase(
           datos_calculo: datos,
           resultado: resultado,
         })
-        .select('id')
+        .select('*')
         .maybeSingle(),
       timeoutFailure('Timeout guardando expediente')
     )
 
     const { data, error } = response
 
-    if (error) throw error
-    return data?.id || null
+    if (error || !data) throw error ?? new Error('No se pudo guardar el expediente')
+    return mapExpedienteRow(data as ExpedienteRow)
   } catch (err) {
     console.error('Error guardando expediente:', err)
     return null
@@ -145,31 +161,7 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
 
     if (error || !data) return []
 
-    return data.map((e: {
-      id: string
-      nombre_empleado: string
-      empresa: string | null
-      datos_calculo?: {
-        puestoEmpleado?: string
-        fechaIngreso?: string
-        fechaSalida?: string
-        tipoDocumento?: string
-        periodos?: Array<{ salarioDiario: number }>
-      } | null
-      resultado: Expediente['resultado']
-      created_at: string
-    }) => ({
-      id: e.id,
-      nombreEmpleado: e.nombre_empleado,
-      puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
-      empresa: e.empresa ?? '',
-      fechaIngreso: e.datos_calculo?.fechaIngreso ?? '',
-      fechaSalida: e.datos_calculo?.fechaSalida ?? '',
-      salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
-      tipoDocumento: e.datos_calculo?.tipoDocumento ?? 'despido',
-      resultado: e.resultado,
-      creadoEn: e.created_at,
-    }))
+    return data.map((e) => mapExpedienteRow(e as ExpedienteRow))
   } catch (err) {
     console.error('Error obteniendo expedientes:', err)
     return []
