@@ -31,43 +31,18 @@ export function useExpedientes() {
 
   async function cargar() {
     setCargando(true)
-    
-    // Timeout de seguridad por si Supabase no responde
-    const timeout = setTimeout(() => {
-      setCargando(false)
-    }, 5000)
-
     try {
-      // Intenta cargar desde Supabase
       const remoto = await obtenerExpedientesSupabase()
-
       if (remoto && remoto.length > 0) {
         setExpedientes(remoto)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(remoto))
       } else {
-        // Fallback a localStorage si no hay remoto o está vacío
         const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) {
-          try {
-            setExpedientes(JSON.parse(raw))
-          } catch {
-            setExpedientes([])
-          }
-        }
+        if (raw) setExpedientes(JSON.parse(raw))
       }
     } catch (error) {
       console.error('Error cargando expedientes:', error)
-      // Fallback a localStorage en caso de error de red/auth
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        try {
-          setExpedientes(JSON.parse(raw))
-        } catch {
-          setExpedientes([])
-        }
-      }
     } finally {
-      clearTimeout(timeout)
       setCargando(false)
     }
   }
@@ -87,24 +62,17 @@ export function useExpedientes() {
       creadoEn: new Date().toISOString(),
     }
 
-    // Actualiza UI inmediatamente (Optimistic UI)
     const actualizados = [nuevo, ...expedientes]
     setExpedientes(actualizados)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados))
 
-    // Intenta sincronizar con Supabase
-    try {
-      await guardarExpedienteSupabase(datos, resultado)
-    } catch (error) {
-      console.error('Error sincronizando con Supabase:', error)
-    }
+    await guardarExpedienteSupabase(datos, resultado)
   }
 
   async function eliminar(id: string) {
     const actualizados = expedientes.filter(e => e.id !== id)
     setExpedientes(actualizados)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados))
-
     await eliminarExpedienteSupabase(id)
   }
 

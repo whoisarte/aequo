@@ -2,6 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const timestamp = new Date().toLocaleTimeString()
+  const path = request.nextUrl.pathname
+  
+  // Ignorar archivos estáticos para no saturar los logs
+  const isStatic = path.includes('_next') || path.includes('favicon')
+  if (!isStatic) console.log(`[${timestamp}] [MIDDLEWARE] Iniciando para: ${path}`)
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -29,27 +36,19 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refrescar sesión (getUser es costoso pero necesario para seguridad en middleware)
+  if (!isStatic) console.log(`[${timestamp}] [MIDDLEWARE] Ejecutando getUser()...`)
+  
   const { data: { user } } = await supabase.auth.getUser()
-
-  const pathname = request.nextUrl.pathname
-  const isAuthRoute = pathname.startsWith('/login') || 
-                      pathname.startsWith('/registro') ||
-                      pathname.startsWith('/confirm')
+  
+  if (!isStatic) console.log(`[${timestamp}] [MIDDLEWARE] getUser() completado. User: ${user?.id ? 'OK' : 'NULL'}`)
 
   const isProtectedRoute = ['/calculadora', '/expedientes', '/estilo', '/reporte'].some(route => 
-    pathname.startsWith(route)
+    path.startsWith(route)
   )
 
-  // Redirección si no hay usuario
   if (!user && isProtectedRoute) {
+    if (!isStatic) console.log(`[${timestamp}] [MIDDLEWARE] Redirigiendo a /login (Protegido)`)
     const url = new URL('/login', request.url)
-    return NextResponse.redirect(url)
-  }
-
-  // Redirección si ya hay usuario pero está en login
-  if (user && isAuthRoute) {
-    const url = new URL('/calculadora', request.url)
     return NextResponse.redirect(url)
   }
 
@@ -58,13 +57,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -31,7 +31,7 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     const ingreso = new Date(datos.fechaIngreso)
     const salida = new Date(datos.fechaSalida)
     const anios: number[] = []
-    for (let y = ingreso.getFullYear() + 1; y <= salida.getFullYear(); y++) {
+    for (let y = ingreso.getFullYear(); y <= salida.getFullYear(); y++) {
       anios.push(y)
     }
     return anios
@@ -76,12 +76,12 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     const ingreso = new Date(datos.fechaIngreso)
     const salida = new Date(datos.fechaSalida)
     const diffMs = salida.getTime() - ingreso.getTime()
-    const diasLaborados = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    const diasLaborados = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
     const aniosCompletos = Math.floor(diasLaborados / 365)
     const diasRestantesDespuesAnios = diasLaborados - aniosCompletos * 365
     const mesesRestantes = Math.floor(diasRestantesDespuesAnios / 30)
     const diasRestantes = diasRestantesDespuesAnios % 30
-    const aniosServicio = +(diasLaborados / 365).toFixed(2)
+    const aniosServicio = Math.floor(diasLaborados / 365)
 
     const finiquito = calcularFiniquito(datos, porcentajeConciliacion)
     const liquidacion = calcularLiquidacion(datos, porcentajeConciliacion)

@@ -1,32 +1,18 @@
 import { createClient } from './client'
 import type { Branding } from '@/lib/pdf/branding'
 
-// Definición de interfaz para el registro del perfil en DB
-interface ProfileRow {
-  id: string
-  despacho: string | null
-  nombre: string | null
-  cedula: string | null
-  correo: string | null
-  direccion: string | null
-  logo_url: string | null
-  color_primario: string | null
-  porcentaje_conciliacion: number | null
-}
-
 export async function guardarPerfilSupabase(branding: Branding): Promise<boolean> {
   try {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) return false
+    if (!session?.user) return false
 
     const { error } = await supabase
       .from('profiles')
       .upsert({
-        id: user.id,
-        despacho: branding.nombreDespacho,
+        id: session.user.id,
         nombre: branding.nombreAbogado,
+        despacho: branding.nombreDespacho,
         cedula: branding.cedula,
         correo: branding.correo,
         direccion: branding.direccion,
@@ -35,13 +21,10 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<boolean
         porcentaje_conciliacion: branding.porcentajeConciliacion,
       })
 
-    if (error) {
-      console.error('Error en upsert perfil:', error)
-      return false
-    }
+    if (error) throw error
     return true
   } catch (err) {
-    console.error('Error guardarPerfil:', err)
+    console.error('Error guardando perfil:', err)
     return false
   }
 }
@@ -50,32 +33,28 @@ export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null>
   try {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) return null
+    if (!session?.user) return null
 
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .maybeSingle()
 
     if (error || !data) return null
 
-    // Casteo explícito del resultado de Supabase
-    const row = data as ProfileRow
-
     return {
-      nombreDespacho: row.despacho ?? '',
-      nombreAbogado: row.nombre ?? '',
-      cedula: row.cedula ?? '',
-      correo: row.correo ?? '',
-      direccion: row.direccion ?? '',
-      logoUrl: row.logo_url ?? '',
-      colorPrimario: row.color_primario ?? '#0a0a0a',
-      porcentajeConciliacion: row.porcentaje_conciliacion ?? 50,
+      nombreDespacho: data.despacho ?? '',
+      nombreAbogado: data.nombre ?? '',
+      cedula: data.cedula ?? '',
+      correo: data.correo ?? '',
+      direccion: data.direccion ?? '',
+      logoUrl: data.logo_url ?? '',
+      colorPrimario: data.color_primario ?? '#0a0a0a',
+      porcentajeConciliacion: data.porcentaje_conciliacion ?? 50,
     }
   } catch (err) {
-    console.error('Error obtenerPerfil:', err)
+    console.error('Error obteniendo perfil:', err)
     return null
   }
 }

@@ -2,16 +2,6 @@ import { createClient } from './client'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 
-// Definición del tipo para la fila de la base de datos
-interface ExpedienteRow {
-  id: string
-  nombre_empleado: string
-  empresa: string | null
-  datos_calculo: DatosEmpleado
-  resultado: ResultadoCalculo
-  created_at: string
-}
-
 export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
@@ -19,29 +9,24 @@ export async function guardarExpedienteSupabase(
   try {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) return null
+    if (!session?.user) return null
 
     const { data, error } = await supabase
       .from('expedientes')
       .insert({
-        user_id: user.id,
-        nombre_empleado: datos.nombreEmpleado, // Corregido el typo aquí
+        user_id: session.user.id,
+        nombre_empleado: datos.nombreEmpleado,
         empresa: datos.empresa,
         datos_calculo: datos,
-        resultado: resultado,
+        resultado: resultado, // Restauramos el guardado del resultado
       })
       .select('id')
       .maybeSingle()
 
-    if (error) {
-      console.error('Error guardando expediente:', error)
-      return null
-    }
-
-    return (data as { id: string } | null)?.id || null
+    if (error) throw error
+    return data?.id || null
   } catch (err) {
-    console.error('Excepción guardando expediente:', err)
+    console.error('Error guardando expediente:', err)
     return null
   }
 }
@@ -50,22 +35,17 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
   try {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
-    if (!user) return []
+    if (!session?.user) return []
 
     const { data, error } = await supabase
       .from('expedientes')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
-    if (error || !data) {
-      if (error) console.error('Error obteniendo expedientes:', error)
-      return []
-    }
+    if (error || !data) return []
 
-    // Casteamos data para que TypeScript conozca sus propiedades en el .map()
-    return (data as ExpedienteRow[]).map(e => ({
+    return (data as any[]).map(e => ({
       id: e.id,
       nombreEmpleado: e.nombre_empleado,
       puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
@@ -78,7 +58,7 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
       creadoEn: e.created_at,
     }))
   } catch (err) {
-    console.error('Excepción obteniendo expedientes:', err)
+    console.error('Error obteniendo expedientes:', err)
     return []
   }
 }
@@ -86,15 +66,9 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
 export async function eliminarExpedienteSupabase(id: string): Promise<boolean> {
   try {
     const supabase = createClient()
-    const { error } = await supabase
-      .from('expedientes')
-      .delete()
-      .eq('id', id)
-
-    if (error) console.error('Error eliminando expediente:', error)
+    const { error } = await supabase.from('expedientes').delete().eq('id', id)
     return !error
-  } catch (err) {
-    console.error('Excepción eliminando expediente:', err)
+  } catch {
     return false
   }
 }

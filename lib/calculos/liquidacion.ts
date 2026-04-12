@@ -25,10 +25,6 @@ export function calcularLiquidacion(
   const diasPrimaAntiguedad = +(12 * aniosProporcionales).toFixed(2)
   const antiguedad = +(diasPrimaAntiguedad * salarioDiario).toFixed(2)
 
-  // 3. Indemnización 20 días por año (proporcional)
-  const dias20porAnio = +(20 * aniosProporcionales).toFixed(2)
-  const indemnizacion20 = +(dias20porAnio * salarioDiario).toFixed(2)
-
   const finiquito = calcularFiniquito(datos, porcentajeConciliacion)
   const { periodos } = finiquito
 
@@ -45,19 +41,13 @@ export function calcularLiquidacion(
       total: antiguedad,
       propuestaConciliacion: +(antiguedad * factor).toFixed(2),
     },
-    {
-      concepto: 'Indemnización (20 días por año)',
-      dias: `${dias20porAnio} días`,
-      total: indemnizacion20,
-      propuestaConciliacion: +(indemnizacion20 * factor).toFixed(2),
-    },
   ]
 
   const desglosePeriodos: DesglosePaso[] = periodos.flatMap(p => p.desglose)
   const desglose = [...desglosePrincipal, ...desglosePeriodos]
 
   const totalFiniquito = finiquito.total
-  const total = +(indemnizacion + antiguedad + indemnizacion20 + totalFiniquito).toFixed(2)
+  const total = +(indemnizacion + antiguedad + totalFiniquito).toFixed(2)
 
   return { 
     indemnizacion, 

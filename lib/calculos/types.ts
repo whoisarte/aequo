@@ -70,3 +70,17 @@ export interface DatosAbogado {
   colorPrimario: string
   porcentajeConciliacion: number
 }
+
+export interface Expediente {
+  id: string
+  nombreEmpleado: string
+  puestoEmpleado: string
+  empresa: string
+  fechaIngreso: string
+  fechaSalida: string
+  salarioDiario: number
+  tipoDocumento: string
+  resultado?: ResultadoCalculo // Ahora es opcional para el transporte
+  datosCalculo: DatosEmpleado
+  creadoEn: string
+}

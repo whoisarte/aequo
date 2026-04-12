@@ -19,7 +19,7 @@ export default function ExpedientesPage() {
         empresa: expediente.empresa,
         fechaIngreso: expediente.fechaIngreso,
         fechaSalida: expediente.fechaSalida,
-        tipoDocumento: expediente.tipoDocumento as 'despido' | 'renuncia' | 'ambos',
+        tipoDocumento: expediente.tipoDocumento as any,
         periodos: [{
           anio: new Date(expediente.fechaSalida).getFullYear(),
           salarioDiario: expediente.salarioDiario,
@@ -43,27 +43,12 @@ export default function ExpedientesPage() {
       </div>
 
       {cargando ? (
-        <div style={{
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '40px',
-          textAlign: 'center',
-          color: 'var(--text-secondary)',
-        }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <p>Cargando expedientes...</p>
         </div>
       ) : expedientes.length === 0 ? (
-        <div style={{
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '40px',
-          textAlign: 'center',
-          color: 'var(--text-secondary)',
-        }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <p>No hay expedientes guardados aún.</p>
-          <p style={{ fontSize: '13px', marginTop: '8px' }}>
-            Genera un cálculo y guárdalo para verlo aquí.
-          </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

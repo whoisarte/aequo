@@ -40,7 +40,7 @@ export function calcularFiniquito(
           concepto: `Aguinaldo proporcional ${anioActual}`,
           dias: `${diasLaboradosAnio} días laborados`,
           total: aguinaldo,
-          propuestaConciliacion: +(aguinaldo * factor).toFixed(2),
+          propuestaConciliacion: aguinaldo,
         })
       }
     }
@@ -49,8 +49,6 @@ export function calcularFiniquito(
     if (periodo.aplicaVacaciones || periodo.aplicaPrimaVacacional) {
       const anioRelativo = periodo.anio - ingreso.getFullYear()
       if (anioRelativo >= 0) {
-        // Determinamos cuántos días le tocan por ley en ese año de servicio
-        // Ley 2026: 12 dias primer año, +2 cada año hasta 20.
         let diasLey = 12
         if (anioRelativo === 0) diasLey = 12
         else if (anioRelativo < 5) diasLey = 12 + (anioRelativo * 2)
@@ -59,7 +57,6 @@ export function calcularFiniquito(
           diasLey = 20 + ((bloques5 + 1) * 2)
         }
 
-        // Calculamos la proporción del año de aniversario
         const inicioAniversario = new Date(ingreso)
         inicioAniversario.setFullYear(ingreso.getFullYear() + anioRelativo)
         const finAniversario = new Date(inicioAniversario)
@@ -76,16 +73,15 @@ export function calcularFiniquito(
           const proporcion = diasEnAniversario / diasTotalesAniversario
           diasVacEfectivos = +(diasLey * proporcion).toFixed(2)
           
-          // Restar días ya usados si es el periodo actual
           const diasPendientes = Math.max(0, diasVacEfectivos - periodo.diasVacacionesUsados)
           
           if (periodo.aplicaVacaciones) {
             vacaciones = +(diasPendientes * salarioDiario).toFixed(2)
             desglose.push({
               concepto: `Vacaciones proporcionales ${periodo.anio}`,
-              dias: `${diasPendientes.toFixed(2)} días`,
+              dias: `${diasPendientes} días`,
               total: vacaciones,
-              propuestaConciliacion: +(vacaciones * factor).toFixed(2),
+              propuestaConciliacion: vacaciones,
             })
           }
 
@@ -95,7 +91,7 @@ export function calcularFiniquito(
               concepto: `Prima vacacional (25%) ${periodo.anio}`,
               dias: '25%',
               total: primaVacacional,
-              propuestaConciliacion: +(primaVacacional * factor).toFixed(2),
+              propuestaConciliacion: primaVacacional,
             })
           }
         }

@@ -71,8 +71,8 @@ export function generarTabla(
     const diasStr = isNaN(Number(paso.dias))
       ? paso.dias
       : paso.dias.includes('/')
-        ? paso.dias.split('/').map(d => Math.round(parseFloat(d))).join('/')
-        : paso.dias
+        ? paso.dias.split('/').map(d => parseFloat(parseFloat(d).toFixed(2)).toString()).join('/')
+        : parseFloat(parseFloat(paso.dias).toFixed(2)).toString()
 
     doc.text(diasStr, colDias, y, { align: 'center' })
     doc.text(fmt(paso.total), colTotal, y, { align: 'right' })

@@ -22,9 +22,9 @@ export function validarDatos(datos: DatosEmpleado): ErroresValidacion {
       errores.fechaSalida = 'La fecha de salida debe ser igual o posterior al ingreso'
     }
   }
-  if (!datos.periodos || datos.periodos.length === 0) {
-    errores.periodos = 'Debes agregar al menos un periodo con adeudo'
-  }
+
+  // La validación de periodos obligatorios se mantiene eliminada 
+  // para permitir cálculos de rangos cortos.
 
   return errores
 }
