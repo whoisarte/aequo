@@ -2,26 +2,57 @@ import { createClient } from './client'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 
+const SUPABASE_TIMEOUT_MS = 8000
+
+async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  return new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(fallback)
+    }, SUPABASE_TIMEOUT_MS)
+
+    void promise
+      .then((value) => {
+        if (timer) clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(() => {
+        if (timer) clearTimeout(timer)
+        resolve(fallback)
+      })
+  })
+}
+
 export async function guardarExpedienteSupabase(
   datos: DatosEmpleado,
   resultado: ResultadoCalculo
 ): Promise<string | null> {
   try {
     const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const sessionResult = await withTimeout(supabase.auth.getSession(), {
+      data: { session: null },
+      error: null,
+    })
+    const { data: { session } } = sessionResult
     if (!session?.user) return null
 
-    const { data, error } = await supabase
-      .from('expedientes')
-      .insert({
-        user_id: session.user.id,
-        nombre_empleado: datos.nombreEmpleado,
-        empresa: datos.empresa,
-        datos_calculo: datos,
-        resultado: resultado, // Restauramos el guardado del resultado
-      })
-      .select('id')
-      .maybeSingle()
+    const response = await withTimeout(
+      supabase
+        .from('expedientes')
+        .insert({
+          user_id: session.user.id,
+          nombre_empleado: datos.nombreEmpleado,
+          empresa: datos.empresa,
+          datos_calculo: datos,
+          resultado: resultado,
+        })
+        .select('id')
+        .maybeSingle(),
+      { data: null, error: new Error('Timeout guardando expediente') }
+    )
+
+    const { data, error } = response
 
     if (error) throw error
     return data?.id || null
@@ -34,18 +65,40 @@ export async function guardarExpedienteSupabase(
 export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
   try {
     const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const sessionResult = await withTimeout(supabase.auth.getSession(), {
+      data: { session: null },
+      error: null,
+    })
+    const { data: { session } } = sessionResult
     if (!session?.user) return []
 
-    const { data, error } = await supabase
-      .from('expedientes')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
+    const response = await withTimeout(
+      supabase
+        .from('expedientes')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false }),
+      { data: null, error: new Error('Timeout obteniendo expedientes') }
+    )
+
+    const { data, error } = response
 
     if (error || !data) return []
 
-    return (data as any[]).map(e => ({
+    return data.map((e: {
+      id: string
+      nombre_empleado: string
+      empresa: string | null
+      datos_calculo?: {
+        puestoEmpleado?: string
+        fechaIngreso?: string
+        fechaSalida?: string
+        tipoDocumento?: string
+        periodos?: Array<{ salarioDiario: number }>
+      } | null
+      resultado: Expediente['resultado']
+      created_at: string
+    }) => ({
       id: e.id,
       nombreEmpleado: e.nombre_empleado,
       puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
@@ -66,7 +119,11 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
 export async function eliminarExpedienteSupabase(id: string): Promise<boolean> {
   try {
     const supabase = createClient()
-    const { error } = await supabase.from('expedientes').delete().eq('id', id)
+    const response = await withTimeout(
+      supabase.from('expedientes').delete().eq('id', id),
+      { error: new Error('Timeout eliminando expediente') }
+    )
+    const { error } = response
     return !error
   } catch {
     return false

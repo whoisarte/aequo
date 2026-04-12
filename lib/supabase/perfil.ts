@@ -1,25 +1,56 @@
 import { createClient } from './client'
 import type { Branding } from '@/lib/pdf/branding'
 
+const SUPABASE_TIMEOUT_MS = 8000
+
+async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  return new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(fallback)
+    }, SUPABASE_TIMEOUT_MS)
+
+    void promise
+      .then((value) => {
+        if (timer) clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(() => {
+        if (timer) clearTimeout(timer)
+        resolve(fallback)
+      })
+  })
+}
+
 export async function guardarPerfilSupabase(branding: Branding): Promise<boolean> {
   try {
     const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const sessionResult = await withTimeout(supabase.auth.getSession(), {
+      data: { session: null },
+      error: null,
+    })
+    const { data: { session } } = sessionResult
     if (!session?.user) return false
 
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: session.user.id,
-        nombre: branding.nombreAbogado,
-        despacho: branding.nombreDespacho,
-        cedula: branding.cedula,
-        correo: branding.correo,
-        direccion: branding.direccion,
-        logo_url: branding.logoUrl,
-        color_primario: branding.colorPrimario,
-        porcentaje_conciliacion: branding.porcentajeConciliacion,
-      })
+    const response = await withTimeout(
+      supabase
+        .from('profiles')
+        .upsert({
+          id: session.user.id,
+          nombre: branding.nombreAbogado,
+          despacho: branding.nombreDespacho,
+          cedula: branding.cedula,
+          correo: branding.correo,
+          direccion: branding.direccion,
+          logo_url: branding.logoUrl,
+          color_primario: branding.colorPrimario,
+          porcentaje_conciliacion: branding.porcentajeConciliacion,
+        }),
+      { error: new Error('Timeout guardando perfil') }
+    )
+
+    const { error } = response
 
     if (error) throw error
     return true
@@ -32,14 +63,23 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<boolean
 export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null> {
   try {
     const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const sessionResult = await withTimeout(supabase.auth.getSession(), {
+      data: { session: null },
+      error: null,
+    })
+    const { data: { session } } = sessionResult
     if (!session?.user) return null
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle()
+    const response = await withTimeout(
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle(),
+      { data: null, error: new Error('Timeout obteniendo perfil') }
+    )
+
+    const { data, error } = response
 
     if (error || !data) return null
 

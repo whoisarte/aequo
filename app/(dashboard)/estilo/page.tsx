@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useRef, useState } from 'react'
 import { useBrandingStore } from '@/store/brandingStore'
 import { guardarPerfilSupabase, obtenerPerfilSupabase } from '@/lib/supabase/perfil'
 import Input from '@/components/ui/Input'
@@ -12,70 +11,86 @@ export default function EstiloPage() {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState('')
-  const isMounted = useRef(true)
-
-  const cargarPerfil = useCallback(async () => {
-    if (!isMounted.current) return
-    try {
-      setCargando(true)
-      const perfil = await obtenerPerfilSupabase()
-      if (perfil) setBranding(perfil)
-    } catch (error) {
-      console.error('Error cargando perfil:', error)
-    } finally {
-      if (isMounted.current) setCargando(false)
-    }
-  }, [setBranding])
+  const isMounted = useRef(false)
+  const isLoadingProfile = useRef(false)
+  const clearMessageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const supabase = createClient()
     isMounted.current = true
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        cargarPerfil()
-      } else if (event === 'SIGNED_OUT') {
-        setCargando(false)
-      }
-    })
+    async function cargarPerfil() {
+      if (isLoadingProfile.current) return
 
-    const timeout = setTimeout(() => {
-      if (cargando) cargarPerfil()
-    }, 4000)
+      isLoadingProfile.current = true
+      setCargando(true)
+
+      try {
+        const perfil = await obtenerPerfilSupabase()
+        if (isMounted.current && perfil) {
+          setBranding(perfil)
+        }
+      } catch (error) {
+        console.error('Error cargando perfil:', error)
+        if (isMounted.current) {
+          setMensaje('No se pudo cargar la configuración. Intenta recargar la página.')
+        }
+      } finally {
+        isLoadingProfile.current = false
+        if (isMounted.current) {
+          setCargando(false)
+        }
+      }
+    }
+
+    void cargarPerfil()
 
     return () => {
       isMounted.current = false
-      subscription.unsubscribe()
-      clearTimeout(timeout)
+      if (clearMessageTimer.current) {
+        clearTimeout(clearMessageTimer.current)
+      }
     }
-  }, [cargarPerfil])
+  }, [setBranding])
 
   async function handleGuardar() {
+    if (guardando) return
+
     setGuardando(true)
     setMensaje('')
-    
-    // Timeout fail-safe
+
+    let timeoutActivo = true
     const timer = setTimeout(() => {
-      if (guardando) {
-        setGuardando(false)
-        setMensaje('La operación está tardando más de lo esperado.')
-      }
+      if (!timeoutActivo || !isMounted.current) return
+      setGuardando(false)
+      setMensaje('La operación está tardando más de lo esperado.')
     }, 15000)
 
     try {
       const ok = await guardarPerfilSupabase(branding)
+      if (!isMounted.current) return
+
       if (ok) {
         setMensaje('Configuración guardada correctamente')
-        setTimeout(() => setMensaje(''), 3000)
+        if (clearMessageTimer.current) {
+          clearTimeout(clearMessageTimer.current)
+        }
+        clearMessageTimer.current = setTimeout(() => {
+          if (isMounted.current) setMensaje('')
+        }, 3000)
       } else {
         setMensaje('Error al guardar configuración. Verifica tu conexión.')
       }
     } catch (error) {
       console.error('Error en handleGuardar:', error)
-      setMensaje('Ocurrió un error inesperado al guardar.')
+      if (isMounted.current) {
+        setMensaje('Ocurrió un error inesperado al guardar.')
+      }
     } finally {
+      timeoutActivo = false
       clearTimeout(timer)
-      setGuardando(false)
+      if (isMounted.current) {
+        setGuardando(false)
+      }
     }
   }
 

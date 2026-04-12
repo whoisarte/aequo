@@ -5,9 +5,15 @@ import { useBrandingStore } from '@/store/brandingStore'
 import { descargarPDF } from '@/lib/pdf/generator'
 import TarjetaExpedientes from '@/components/expedientes/TarjetaExpedientes'
 import type { Expediente } from '@/hooks/useExpedientes'
+import type { TipoDocumento } from '@/lib/calculos/types'
+
+function normalizarTipoDocumento(tipo: string): TipoDocumento {
+  if (tipo === 'renuncia' || tipo === 'ambos') return tipo
+  return 'despido'
+}
 
 export default function ExpedientesPage() {
-  const { expedientes, eliminar, cargando } = useExpedientes()
+  const { expedientes, eliminar, cargando, error, recargar } = useExpedientes()
   const { branding } = useBrandingStore()
 
   function handleDescargar(expediente: Expediente) {
@@ -19,7 +25,7 @@ export default function ExpedientesPage() {
         empresa: expediente.empresa,
         fechaIngreso: expediente.fechaIngreso,
         fechaSalida: expediente.fechaSalida,
-        tipoDocumento: expediente.tipoDocumento as any,
+        tipoDocumento: normalizarTipoDocumento(expediente.tipoDocumento),
         periodos: [{
           anio: new Date(expediente.fechaSalida).getFullYear(),
           salarioDiario: expediente.salarioDiario,
@@ -45,6 +51,27 @@ export default function ExpedientesPage() {
       {cargando ? (
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <p>Cargando expedientes...</p>
+        </div>
+      ) : error ? (
+        <div style={{ border: '1px solid #fecaca', borderRadius: 'var(--radius)', padding: '24px', background: '#fef2f2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ color: '#b91c1c' }}>{error}</p>
+          <div>
+            <button
+              type="button"
+              onClick={() => void recargar()}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 'var(--radius)',
+                border: '1px solid #fecaca',
+                background: '#fff',
+                color: '#991b1b',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
         </div>
       ) : expedientes.length === 0 ? (
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
