@@ -3,7 +3,7 @@ import type { Branding } from '@/lib/pdf/branding'
 
 const SUPABASE_TIMEOUT_MS = 8000
 
-async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null
 
   return new Promise<T>((resolve) => {
@@ -23,7 +23,18 @@ async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
   })
 }
 
-export async function guardarPerfilSupabase(branding: Branding): Promise<boolean> {
+export type PerfilEstado =
+  | { status: 'ok'; perfil: Partial<Branding> }
+  | { status: 'empty' }
+  | { status: 'no-session' }
+  | { status: 'error'; message: string }
+
+export type GuardarPerfilEstado =
+  | { status: 'ok' }
+  | { status: 'no-session'; message: string }
+  | { status: 'error'; message: string }
+
+export async function guardarPerfilSupabase(branding: Branding): Promise<GuardarPerfilEstado> {
   try {
     const supabase = createClient()
     const sessionResult = await withTimeout(supabase.auth.getSession(), {
@@ -31,7 +42,12 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<boolean
       error: null,
     })
     const { data: { session } } = sessionResult
-    if (!session?.user) return false
+    if (!session?.user) {
+      return {
+        status: 'no-session',
+        message: 'Tu sesión no está disponible. Intenta nuevamente.',
+      }
+    }
 
     const response = await withTimeout(
       supabase
@@ -53,14 +69,17 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<boolean
     const { error } = response
 
     if (error) throw error
-    return true
+    return { status: 'ok' }
   } catch (err) {
     console.error('Error guardando perfil:', err)
-    return false
+    return {
+      status: 'error',
+      message: 'No se pudo guardar la configuración. Intenta nuevamente.',
+    }
   }
 }
 
-export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null> {
+export async function obtenerPerfilSupabase(): Promise<PerfilEstado> {
   try {
     const supabase = createClient()
     const sessionResult = await withTimeout(supabase.auth.getSession(), {
@@ -68,7 +87,11 @@ export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null>
       error: null,
     })
     const { data: { session } } = sessionResult
-    if (!session?.user) return null
+    if (!session?.user) {
+      return {
+        status: 'no-session',
+      }
+    }
 
     const response = await withTimeout(
       supabase
@@ -81,20 +104,37 @@ export async function obtenerPerfilSupabase(): Promise<Partial<Branding> | null>
 
     const { data, error } = response
 
-    if (error || !data) return null
+    if (error) {
+      return {
+        status: 'error',
+        message: 'No se pudo cargar tu configuración. Intenta nuevamente.',
+      }
+    }
+
+    if (!data) {
+      return {
+        status: 'empty',
+      }
+    }
 
     return {
-      nombreDespacho: data.despacho ?? '',
-      nombreAbogado: data.nombre ?? '',
-      cedula: data.cedula ?? '',
-      correo: data.correo ?? '',
-      direccion: data.direccion ?? '',
-      logoUrl: data.logo_url ?? '',
-      colorPrimario: data.color_primario ?? '#0a0a0a',
-      porcentajeConciliacion: data.porcentaje_conciliacion ?? 50,
+      status: 'ok',
+      perfil: {
+        nombreDespacho: data.despacho ?? '',
+        nombreAbogado: data.nombre ?? '',
+        cedula: data.cedula ?? '',
+        correo: data.correo ?? '',
+        direccion: data.direccion ?? '',
+        logoUrl: data.logo_url ?? '',
+        colorPrimario: data.color_primario ?? '#0a0a0a',
+        porcentajeConciliacion: data.porcentaje_conciliacion ?? 50,
+      },
     }
   } catch (err) {
     console.error('Error obteniendo perfil:', err)
-    return null
+    return {
+      status: 'error',
+      message: 'No se pudo cargar tu configuración. Intenta nuevamente.',
+    }
   }
 }

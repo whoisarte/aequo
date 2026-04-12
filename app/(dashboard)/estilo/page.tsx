@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBrandingStore } from '@/store/brandingStore'
 import { guardarPerfilSupabase, obtenerPerfilSupabase } from '@/lib/supabase/perfil'
 import Input from '@/components/ui/Input'
@@ -11,37 +11,52 @@ export default function EstiloPage() {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState('')
+  const [errorCarga, setErrorCarga] = useState('')
   const isMounted = useRef(false)
   const isLoadingProfile = useRef(false)
   const clearMessageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    isMounted.current = true
+  const cargarPerfil = useCallback(async () => {
+    if (isLoadingProfile.current) return
 
-    async function cargarPerfil() {
-      if (isLoadingProfile.current) return
+    isLoadingProfile.current = true
+    setCargando(true)
+    setErrorCarga('')
 
-      isLoadingProfile.current = true
-      setCargando(true)
+    try {
+      const resultado = await obtenerPerfilSupabase()
+      if (!isMounted.current) return
 
-      try {
-        const perfil = await obtenerPerfilSupabase()
-        if (isMounted.current && perfil) {
-          setBranding(perfil)
-        }
-      } catch (error) {
-        console.error('Error cargando perfil:', error)
-        if (isMounted.current) {
-          setMensaje('No se pudo cargar la configuración. Intenta recargar la página.')
-        }
-      } finally {
-        isLoadingProfile.current = false
-        if (isMounted.current) {
-          setCargando(false)
-        }
+      if (resultado.status === 'ok') {
+        setBranding(resultado.perfil)
+        return
+      }
+
+      if (resultado.status === 'empty') {
+        return
+      }
+
+      if (resultado.status === 'no-session') {
+        setErrorCarga('Tu sesión no está disponible en este momento. Intenta nuevamente.')
+        return
+      }
+
+      setErrorCarga(resultado.message)
+    } catch (error) {
+      console.error('Error cargando perfil:', error)
+      if (isMounted.current) {
+        setErrorCarga('No se pudo cargar la configuración. Intenta nuevamente.')
+      }
+    } finally {
+      isLoadingProfile.current = false
+      if (isMounted.current) {
+        setCargando(false)
       }
     }
+  }, [setBranding])
 
+  useEffect(() => {
+    isMounted.current = true
     void cargarPerfil()
 
     return () => {
@@ -50,7 +65,7 @@ export default function EstiloPage() {
         clearTimeout(clearMessageTimer.current)
       }
     }
-  }, [setBranding])
+  }, [cargarPerfil])
 
   async function handleGuardar() {
     if (guardando) return
@@ -66,19 +81,23 @@ export default function EstiloPage() {
     }, 15000)
 
     try {
-      const ok = await guardarPerfilSupabase(branding)
+      const resultado = await guardarPerfilSupabase(branding)
       if (!isMounted.current) return
 
-      if (ok) {
+      if (resultado.status === 'ok') {
         setMensaje('Configuración guardada correctamente')
+        setErrorCarga('')
         if (clearMessageTimer.current) {
           clearTimeout(clearMessageTimer.current)
         }
         clearMessageTimer.current = setTimeout(() => {
           if (isMounted.current) setMensaje('')
         }, 3000)
+      } else if (resultado.status === 'no-session') {
+        setMensaje(resultado.message)
+        setErrorCarga(resultado.message)
       } else {
-        setMensaje('Error al guardar configuración. Verifica tu conexión.')
+        setMensaje(resultado.message)
       }
     } catch (error) {
       console.error('Error en handleGuardar:', error)
@@ -108,6 +127,29 @@ export default function EstiloPage() {
         <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Estilo del reporte</h1>
         <p style={{ color: 'var(--text-secondary)' }}>Configura la identidad visual de tus PDFs</p>
       </div>
+
+      {errorCarga && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: 'var(--radius)', border: '1px solid #fecaca', background: '#fef2f2' }}>
+          <p style={{ fontSize: '13px', color: '#b91c1c' }}>{errorCarga}</p>
+          <div>
+            <button
+              type="button"
+              onClick={() => void cargarPerfil()}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 'var(--radius)',
+                border: '1px solid #fecaca',
+                background: '#fff',
+                color: '#991b1b',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>

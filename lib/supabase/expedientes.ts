@@ -4,7 +4,7 @@ import type { Expediente } from '@/hooks/useExpedientes'
 
 const SUPABASE_TIMEOUT_MS = 8000
 
-async function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null
 
   return new Promise<T>((resolve) => {
