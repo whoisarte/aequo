@@ -36,7 +36,18 @@ export function aplicarEncabezado(
   // Logo a la izquierda
   if (branding.logoUrl) {
     try {
-      doc.addImage(branding.logoUrl, 'PNG', margen, 10, 40, 15, undefined, 'FAST')
+      const imgProps = doc.getImageProperties(branding.logoUrl)
+      const maxWidth = 40
+      const maxHeight = 15
+      const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height)
+      const width = imgProps.width * ratio
+      const height = imgProps.height * ratio
+      
+      // Centrar el logo en la caja de 40x15
+      const x = margen + (maxWidth - width) / 2
+      const y = 10 + (maxHeight - height) / 2
+      
+      doc.addImage(branding.logoUrl, 'PNG', x, y, width, height, undefined, 'FAST')
     } catch (e) {
       console.warn('Error al cargar logo en PDF:', e)
     }

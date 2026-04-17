@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useCalculadora } from '@/hooks/useCalculadora'
 import { useBrandingStore } from '@/store/brandingStore'
 import { useExpedientes } from '@/hooks/useExpedientes'
@@ -8,11 +8,17 @@ import { descargarPDF } from '@/lib/pdf/generator'
 import FormularioEmpleado from '@/components/calculadora/FormularioEmpleado'
 import TablaComparativa from '@/components/calculadora/TablaComparativa'
 import Button from '@/components/ui/Button'
+import PaywallModal from '@/components/ui/PaywallModal'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
+import { getSubscriptionStatus, getSingleGenerationDetails } from '@/lib/services/billing-actions'
 
 export default function CalculadoraPage() {
   const { branding } = useBrandingStore()
   const resultadosRef = useRef<HTMLDivElement>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
+  const [singleProduct, setSingleProduct] = useState<{ id: string; price_cents: number } | null>(null)
+  const [isSubscribed, setIsSubscribed] = useState(false)
+
   const {
     datos, resultado, errores,
     actualizarDato, generarAniosDisponibles,
@@ -20,6 +26,20 @@ export default function CalculadoraPage() {
     calcular, resetear,
   } = useCalculadora(branding.porcentajeConciliacion)
   const { guardar } = useExpedientes()
+
+  // Verificar suscripción al cargar
+  useEffect(() => {
+    async function checkStatus() {
+      const { isActive } = await getSubscriptionStatus()
+      setIsSubscribed(isActive)
+      
+      if (!isActive) {
+        const product = await getSingleGenerationDetails()
+        setSingleProduct(product)
+      }
+    }
+    checkStatus()
+  }, [])
 
   // Efecto para hacer scroll automático cuando aparece el resultado
   useEffect(() => {
@@ -30,18 +50,35 @@ export default function CalculadoraPage() {
     }
   }, [resultado])
 
-  function handleDescargar() {
+  async function validateAccess() {
+    if (isSubscribed) return true
+    
+    // Re-verificar por si acaso
+    const { isActive } = await getSubscriptionStatus()
+    if (isActive) {
+      setIsSubscribed(true)
+      return true
+    }
+    
+    setShowPaywall(true)
+    return false
+  }
+
+  async function handleDescargar() {
     if (!resultado) return
+    if (!(await validateAccess())) return
     descargarPDF({ resultado, datos, branding }, `aequo-${datos.nombreEmpleado || 'calculo'}`)
   }
 
-  function handleGuardar() {
+  async function handleGuardar() {
     if (!resultado) return
+    if (!(await validateAccess())) return
     guardar(datos, resultado)
   }
 
-  function handleWhatsApp() {
+  async function handleWhatsApp() {
     if (!resultado) return
+    if (!(await validateAccess())) return
     compartirWhatsApp(
       datos.nombreEmpleado,
       resultado.finiquito.total,
@@ -50,8 +87,9 @@ export default function CalculadoraPage() {
     )
   }
 
-  function handleCorreo() {
+  async function handleCorreo() {
     if (!resultado) return
+    if (!(await validateAccess())) return
     compartirCorreo(
       datos.nombreEmpleado,
       resultado.finiquito.total,
@@ -95,6 +133,12 @@ export default function CalculadoraPage() {
           <TablaComparativa resultado={resultado} />
         </div>
       )}
+
+      <PaywallModal 
+        isOpen={showPaywall} 
+        onClose={() => setShowPaywall(false)} 
+        singleProduct={singleProduct}
+      />
     </div>
   )
 }

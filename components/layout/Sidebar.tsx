@@ -9,6 +9,7 @@ const navItems = [
   { label: 'Calculadora', href: '/calculadora' },
   { label: 'Expedientes', href: '/expedientes' },
   { label: 'Estilo', href: '/estilo' },
+  { label: 'Membresía', href: '/billing' },
 ]
 
 export default function Sidebar() {
