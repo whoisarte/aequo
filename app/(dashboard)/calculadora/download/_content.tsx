@@ -44,7 +44,11 @@ export default function DownloadContent() {
           <p className="text-sm text-gray-500 mt-2">
             Si la descarga no comenzó,{' '}
             <button 
-              onClick={() => descargarPDF(data, `aequo-${data?.datos.nombreEmpleado || 'calculo'}`)} 
+              onClick={() => {
+                if (data) {
+                  descargarPDF(data, `aequo-${data.datos.nombreEmpleado || 'calculo'}`);
+                }
+              }} 
               className="text-blue-600 underline"
             >
               haz clic aquí para descargar

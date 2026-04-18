@@ -17,7 +17,12 @@ export default function CalculadoraPage() {
   const resultadosRef = useRef<HTMLDivElement>(null)
   const [showPaywall, setShowPaywall] = useState(false)
   const [singleProduct, setSingleProduct] = useState<{ id: string; price_cents: number } | null>(null)
-  const [access, setAccess] = useState<{ canGenerate: boolean, reason?: string }>({ canGenerate: false })
+  const [access, setAccess] = useState<{ 
+    canGenerate: boolean; 
+    reason?: string | null; 
+    used?: number; 
+    limit?: number 
+  }>({ canGenerate: false })
 
   const {
     datos, resultado, errores,
