@@ -17,7 +17,7 @@ export default function CalculadoraPage() {
   const resultadosRef = useRef<HTMLDivElement>(null)
   const [showPaywall, setShowPaywall] = useState(false)
   const [singleProduct, setSingleProduct] = useState<{ id: string; price_cents: number } | null>(null)
-  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [access, setAccess] = useState<{ canGenerate: boolean, reason?: string }>({ canGenerate: false })
 
   const {
     datos, resultado, errores,
@@ -27,13 +27,13 @@ export default function CalculadoraPage() {
   } = useCalculadora(branding.porcentajeConciliacion)
   const { guardar } = useExpedientes()
 
-  // Verificar suscripción al cargar
+  // Verificar estado al cargar
   useEffect(() => {
     async function checkStatus() {
-      const { isActive } = await getSubscriptionStatus()
-      setIsSubscribed(isActive)
+      const accessStatus = await checkAccess()
+      setAccess(accessStatus)
       
-      if (!isActive) {
+      if (!accessStatus.canGenerate) {
         const product = await getSingleGenerationDetails()
         setSingleProduct(product)
       }
@@ -58,12 +58,13 @@ export default function CalculadoraPage() {
   }, [resultado])
 
   async function validateAccess() {
-    const { canGenerate } = await checkAccess();
+    const currentAccess = await checkAccess()
+    setAccess(currentAccess)
     
-    if (canGenerate) return true;
+    if (currentAccess.canGenerate) return true
     
-    setShowPaywall(true);
-    return false;
+    setShowPaywall(true)
+    return false
   }
 
   async function handleDescargar() {
@@ -125,7 +126,7 @@ export default function CalculadoraPage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '600' }}>Resultado comparativo</h2>
-            {isSubscribed ? (
+            {access.canGenerate ? (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <Button onClick={handleDescargar}>Descargar PDF</Button>
                 <Button variant="secondary" onClick={handleGuardar}>Guardar expediente</Button>
@@ -141,7 +142,7 @@ export default function CalculadoraPage() {
             )}
           </div>
           
-          {isSubscribed ? (
+          {access.canGenerate ? (
             <TablaComparativa resultado={resultado} />
           ) : (
             <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">

@@ -10,10 +10,11 @@ export default async function BillingPage() {
   if (!user) return <div className="p-8 text-center">Inicia sesión para ver tu membresía.</div>;
 
   const subscription = await getUserSubscription(user.id);
-  const plans: PricingPlan[] = await getPricingPlans();
+  const allPlans = await getPricingPlans();
+  const plans = allPlans.filter(p => !p.name.toLowerCase().includes('individual'));
 
   if (subscription && subscription.status === 'active') {
-    const currentPlan = plans.find(p => p.id === subscription.plan);
+    const currentPlan = plans.find(p => p.id.trim() === subscription.plan.trim());
     const upgradePlans = plans.filter(p => (currentPlan ? p.price_cents > currentPlan.price_cents : true));
 
     return (

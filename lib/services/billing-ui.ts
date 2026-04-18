@@ -24,12 +24,14 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
 
   const quantityKeywords = ['documentos', 'generaciones', 'docs'];
 
-  const filteredData = data.map(plan => ({
-    ...plan,
-    features: plan.features.filter((feature: string) =>
-      quantityKeywords.some(keyword => feature.toLowerCase().includes(keyword))
-    ),
-  }));
+  const filteredData = data
+    .filter(plan => !plan.name.toLowerCase().includes('individual'))
+    .map(plan => ({
+      ...plan,
+      features: plan.features.filter((feature: string) =>
+        quantityKeywords.some(keyword => feature.toLowerCase().includes(keyword))
+      ),
+    }));
 
   return filteredData as PricingPlan[];
 }

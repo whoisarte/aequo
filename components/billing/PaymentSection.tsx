@@ -40,9 +40,8 @@ export default function PaymentSection({ products, isSubscribed }: PaymentSectio
 
               <div className="mb-4">
                 <p className="text-xl font-black text-black mb-3">
-                  ${(plan.price_cents / 100).toFixed(0)} <span className="text-sm font-normal text-gray-500">MXN / mes</span>
-                </p>
-                <form action="/api/billing/checkout" method="POST">
+                  ${plan.price_cents / 100} <span className="text-sm font-normal text-gray-500">MXN / mes</span>
+                </p>                <form action="/api/billing/checkout" method="POST">
                   <input type="hidden" name="planId" value={plan.id} />
                   <input type="hidden" name="mode" value="subscription" />
                   <button type="submit" className="w-full py-2 px-4 bg-black text-white font-bold rounded-md uppercase text-xs hover:opacity-90 transition-opacity">

@@ -49,11 +49,13 @@ export async function canGenerateDocument(userId: string) {
     .select('plan')
     .eq('user_id', userId)
     .eq('status', 'active')
+    .not('plan', 'ilike', '%individual%')
     .maybeSingle();
 
+  // Si no tiene suscripción activa, no puede generar documentos mediante suscripción
   if (error || !subscription) return { canGenerate: false, reason: 'no_subscription' };
 
-  // 2. Obtener el límite del plan
+  // 2. Obtener el límite del plan contratado
   const { data: product } = await supabaseAdmin
     .from('products')
     .select('doc_limit')
@@ -62,12 +64,13 @@ export async function canGenerateDocument(userId: string) {
 
   const limit = product?.doc_limit || 0;
   
-  // 3. Obtener documentos usados
+  // 3. Obtener documentos usados en el mes actual
   const used = await getUserDocumentCount(userId);
 
   return { 
     canGenerate: used < limit, 
     used, 
-    limit 
+    limit,
+    reason: used >= limit ? 'limit_exceeded' : null
   };
 }
