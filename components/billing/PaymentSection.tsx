@@ -12,7 +12,12 @@ interface Product {
   doc_limit: number;
 }
 
-export default function PaymentSection({ products }: { products: Product[] }) {
+interface PaymentSectionProps {
+  products: Product[];
+  isSubscribed: boolean;
+}
+
+export default function PaymentSection({ products, isSubscribed }: PaymentSectionProps) {
   const INDIVIDUAL_PRODUCT_ID = '4aa9fed4-5fb3-4bf2-8bc8-5324319cb021';
 
   return (
