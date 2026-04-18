@@ -1,5 +1,6 @@
 import { getPricingPlans, PricingPlan, getUserSubscription } from '@/lib/services/billing-ui';
 import PaymentSection from '@/components/billing/PaymentSection';
+import Button from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function BillingPage() {
@@ -12,19 +13,35 @@ export default async function BillingPage() {
   const plans: PricingPlan[] = await getPricingPlans();
 
   if (subscription && subscription.status === 'active') {
-    const planDetails = plans.find(p => p.id === subscription.plan) || { name: 'Membresía' };
+    const currentPlan = plans.find(p => p.id === subscription.plan);
+    const upgradePlans = plans.filter(p => (currentPlan ? p.price_cents > currentPlan.price_cents : true));
+
     return (
-      <div className="py-16 px-4 text-center">
-        <div className="max-w-md mx-auto bg-green-50 border border-green-200 p-8 rounded-xl shadow-sm">
-          <h2 className="text-2xl font-bold text-green-800 mb-2">¡Tienes una membresía activa!</h2>
-          <p className="text-green-600 mb-6">Tu plan está al día.</p>
-          <div className="text-left bg-white p-4 rounded border border-green-100">
-            <p className="font-semibold text-gray-700">Plan: {planDetails.name}</p>
-            <p className="text-sm text-gray-500">Estado: Activo</p>
-          </div>
-          <a href="/calculadora" className="mt-8 block w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700">
-            Ir a la Calculadora
-          </a>
+      <div className="py-16 px-4">
+        <div className="max-w-2xl mx-auto bg-white border border-gray-200 p-8 rounded-xl shadow-sm text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Tu Membresía</h2>
+          <div className="text-lg font-semibold text-blue-600 mb-6">{currentPlan?.name || 'Membresía Activa'}</div>
+          
+          {upgradePlans.length > 0 ? (
+            <>
+              <p className="text-gray-600 mb-6">¿Quieres más capacidad? Mejora tu plan:</p>
+              <div className="grid gap-4">
+                {upgradePlans.map(plan => (
+                  <form key={plan.id} action="/api/billing/checkout" method="POST" className="border p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold">{plan.name}</h4>
+                      <p className="text-sm text-gray-500">${plan.price_cents / 100} MXN / mes</p>
+                    </div>
+                    <input type="hidden" name="planId" value={plan.id} />
+                    <input type="hidden" name="mode" value="subscription" />
+                    <Button type="submit">Actualizar</Button>
+                  </form>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-green-600 font-bold">¡Tienes el plan más avanzado!</p>
+          )}
         </div>
       </div>
     );
@@ -48,7 +65,7 @@ export default async function BillingPage() {
           Elige el plan que mejor se adapte a tu despacho.
         </p>
       </div>
-      <PaymentSection products={productsForUI} />
+      <PaymentSection products={productsForUI} isSubscribed={!!subscription} />
     </div>
   );
 }

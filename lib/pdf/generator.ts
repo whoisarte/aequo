@@ -27,7 +27,12 @@ const brandingConDatos: Branding = {
   periodos: datos.periodos,
 }
 
-  const tipo = resultado.tipoDocumento
+  const tipo = resultado.tipoDocumento || datos.tipoDocumento;
+
+  if (!tipo) {
+    console.error('Tipo de documento no encontrado en resultado ni en datos');
+    return doc;
+  }
 
   if (tipo === 'despido' || tipo === 'ambos') {
     const yInicial = aplicarEncabezado(doc, brandingConDatos)

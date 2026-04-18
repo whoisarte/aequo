@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server';
-import { checkUserSubscription, getSingleGenerationProduct } from './billing-usage';
+import { checkUserSubscription, getSingleGenerationProduct, canGenerateDocument } from './billing-usage';
 
 export async function getSubscriptionStatus() {
   const supabase = await createClient();
@@ -11,6 +11,14 @@ export async function getSubscriptionStatus() {
 
   const isActive = await checkUserSubscription(user.id);
   return { isActive, userId: user.id };
+}
+
+export async function checkAccess() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { canGenerate: false };
+  
+  return await canGenerateDocument(user.id);
 }
 
 export async function getSingleGenerationDetails() {

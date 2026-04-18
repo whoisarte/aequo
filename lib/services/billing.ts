@@ -21,7 +21,12 @@ export const BillingService = {
     origin: string
   ) {
     // 1. Validate input
-    CreateCheckoutSessionSchema.parse({ planId });
+    try {
+      CreateCheckoutSessionSchema.parse({ planId });
+    } catch (e) {
+      console.error('Validation error:', e);
+      throw e;
+    }
 
     // 2. Fetch product details from DB
     const { data: product, error } = await supabaseAdmin
@@ -30,28 +35,40 @@ export const BillingService = {
       .eq('id', planId)
       .single();
 
-    if (error || !product?.stripe_price_id) {
+    if (error) {
+      console.error('Supabase DB error:', error);
+      throw new Error('Error al consultar producto: ' + error.message);
+    }
+    
+    if (!product?.stripe_price_id) {
+      console.error('Product found but no stripe_price_id:', product);
       throw new Error('Producto no encontrado o configuración de precio inválida.');
     }
     
     // 3. Create session
-    return await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: product.stripe_price_id,
-          quantity: 1,
+    try {
+      return await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: product.stripe_price_id,
+            quantity: 1,
+          },
+        ],
+        mode: mode,
+        success_url: mode === 'subscription' 
+          ? `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}` 
+          : `${origin}/calculadora/download?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/billing?canceled=true`,        customer_email: userEmail,
+        metadata: {
+          userId,
+          planId,
+          mode, 
         },
-      ],
-      mode: mode,
-      success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/billing?canceled=true`,
-      customer_email: userEmail,
-      metadata: {
-        userId,
-        planId,
-        mode, // Add mode to metadata for webhook processing
-      },
-    });
+      });
+    } catch (e) {
+      console.error('Stripe SDK error:', e);
+      throw e;
+    }
   },
 };

@@ -22,7 +22,6 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
     return [];
   }
 
-  // Filtrar características para solo mostrar temas de cantidad
   const quantityKeywords = ['documentos', 'generaciones', 'docs'];
 
   const filteredData = data.map(plan => ({
@@ -36,13 +35,16 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
 }
 
 export async function getUserSubscription(userId: string) {
+  // Aseguramos que solo traiga registros que sean explícitamente suscripciones
+  // y que no tengan el modo 'payment' (pago único)
   const { data, error } = await supabaseAdmin
     .from('subscriptions')
     .select('plan, status, current_period_end')
     .eq('user_id', userId)
     .eq('status', 'active')
+    .not('plan', 'ilike', '%individual%') 
     .maybeSingle();
 
-  if (error) return null;
+  if (error || !data) return null;
   return data;
 }
