@@ -4,9 +4,19 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const planId = formData.get('planId') as string;
-    const mode = (formData.get('mode') as 'subscription' | 'payment') || 'subscription';
+    let planId: string;
+    let mode: 'subscription' | 'payment' = 'subscription';
+
+    const contentType = req.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      const body = await req.json();
+      planId = body.planId as string;
+      mode = (body.mode as 'subscription' | 'payment') || 'subscription';
+    } else {
+      const formData = await req.formData();
+      planId = formData.get('planId') as string;
+      mode = (formData.get('mode') as 'subscription' | 'payment') || 'subscription';
+    }
 
     if (!planId) {
       return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });

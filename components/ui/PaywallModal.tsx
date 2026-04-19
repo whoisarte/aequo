@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import Button from './Button';
+import { useToast } from '@/lib/toast/index';
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -10,6 +11,44 @@ interface PaywallModalProps {
 }
 
 export default function PaywallModal({ isOpen, onClose, singleProduct }: PaywallModalProps) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePaymentClick = async () => {
+    if (!singleProduct) return;
+
+    try {
+      setIsLoading(true);
+      toast.success('Redirigiendo a pago...');
+
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: singleProduct.id,
+          mode: 'payment'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al procesar el pago');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      const message = error instanceof Error ? error.message : 'Error al procesar el pago';
+      toast.error(message);
+      setIsLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -42,16 +81,13 @@ export default function PaywallModal({ isOpen, onClose, singleProduct }: Paywall
 
           {/* Opción 2: Pago Único */}
           {singleProduct && (
-            <form action="/api/billing/checkout" method="POST">
-              <input type="hidden" name="planId" value={singleProduct.id} />
-              <input type="hidden" name="mode" value="payment" />
-              <button 
-                type="submit"
-                className="w-full py-3 px-6 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition"
-              >
-                Pagar Generación Individual (${(singleProduct.price_cents / 100).toFixed(0)} MXN)
-              </button>
-            </form>
+            <button
+              onClick={handlePaymentClick}
+              disabled={isLoading}
+              className="w-full py-3 px-6 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Procesando...' : `Pagar Generación Individual ($${(singleProduct.price_cents / 100).toFixed(0)} MXN)`}
+            </button>
           )}
 
           <button 

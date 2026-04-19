@@ -97,6 +97,37 @@ export default function CalculadoraPage() {
     guardar(datos, resultado)
   }
 
+  async function handlePaymentClick() {
+    if (!singleProduct) return;
+
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: singleProduct.id,
+          mode: 'payment'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al procesar el pago');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      const message = error instanceof Error ? error.message : 'Error al procesar el pago';
+      // You might want to use toast here if available
+    }
+  }
+
   async function handleWhatsApp() {
     if (!resultado) return
     if (!(await validateAccess())) return
@@ -152,11 +183,7 @@ export default function CalculadoraPage() {
                 <Button variant="secondary" onClick={handleCorreo}>Correo</Button>
               </div>
             ) : (
-              <form action="/api/billing/checkout" method="POST">
-                <input type="hidden" name="planId" value={singleProduct?.id || ''} />
-                <input type="hidden" name="mode" value="payment" />
-                <Button type="submit">Ver resumen y pagar ($50 MXN)</Button>
-              </form>
+              <Button onClick={handlePaymentClick}>Ver resumen y pagar ($50 MXN)</Button>
             )}
           </div>
           
@@ -167,11 +194,7 @@ export default function CalculadoraPage() {
               <p className="text-gray-600 mb-4">
                 El resumen del cálculo está oculto. Realiza un pago único o suscríbete para verlo.
               </p>
-              <form action="/api/billing/checkout" method="POST">
-                <input type="hidden" name="planId" value={singleProduct?.id || ''} />
-                <input type="hidden" name="mode" value="payment" />
-                <Button type="submit">Desbloquear resumen ($50 MXN)</Button>
-              </form>
+              <Button onClick={handlePaymentClick}>Desbloquear resumen ($50 MXN)</Button>
             </div>
           )}
         </div>
