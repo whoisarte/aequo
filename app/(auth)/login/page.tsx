@@ -1,17 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/lib/toast/index'
+import { loginSchema, type LoginFormData } from '@/lib/forms/schemas'
+import FormProvider from '@/components/forms/FormProvider'
+import FormField from '@/components/forms/FormField'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const toast = useToast()
+  const methods = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
+  const { formState: { isSubmitting } } = methods
 
   useEffect(() => {
     if (window.location.hash.includes('access_token')) {
@@ -19,100 +27,101 @@ export default function LoginPage() {
     }
   }, [router])
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    if (loading) return
-    
-    setLoading(true)
-    setError('')
-    
+  async function handleLogin(formData: LoginFormData) {
     try {
       const supabase = createClient()
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       })
-      
+
       if (loginError) {
-        setError(loginError.message)
-        setLoading(false)
+        toast.error('Error al iniciar sesión: ' + loginError.message)
       } else if (data.session) {
-        // Forzamos un refresh para que el middleware vea las nuevas cookies
+        toast.success('¡Bienvenido! Iniciando sesión...')
         router.refresh()
         router.push('/calculadora')
-      } else {
-        setLoading(false)
       }
     } catch (err) {
       console.error('Login error:', err)
-      setError('Error inesperado al intentar entrar.')
-      setLoading(false)
+      toast.error('Error inesperado. Por favor intenta nuevamente')
     }
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-surface)',
-    }}>
-      <form 
-        onSubmit={handleLogin}
-        style={{
-          background: 'var(--bg-primary)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '40px',
-          width: '100%',
-          maxWidth: '400px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Aequo</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Inicia sesión para continuar</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-surface)',
+      }}
+    >
+      <FormProvider methods={methods} onSubmit={handleLogin}>
+        <div
+          style={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '40px',
+            width: '100%',
+            maxWidth: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+          }}
+        >
+          <div>
+            <h1
+              style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}
+            >
+              Aequo
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              Inicia sesión para continuar
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <FormField name="email" label="Correo electrónico">
+              {(field) => (
+                <Input
+                  {...field}
+                  type="email"
+                  placeholder="tu@correo.com"
+                />
+              )}
+            </FormField>
+            <FormField name="password" label="Contraseña">
+              {(field) => (
+                <Input
+                  {...field}
+                  type="password"
+                  placeholder="••••••••"
+                />
+              )}
+            </FormField>
+          </div>
+
+          <Button type="submit" disabled={isSubmitting} fullWidth>
+            {isSubmitting ? 'Entrando...' : 'Iniciar sesión'}
+          </Button>
+
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+            }}
+          >
+            ¿No tienes cuenta?{' '}
+            <a href="/registro" style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
+              Regístrate
+            </a>
+          </p>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input
-            label="Correo electrónico"
-            name="email"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="tu@correo.com"
-            required
-          />
-          <Input
-            label="Contraseña"
-            name="password"
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-          />
-        </div>
-
-        {error && (
-          <p style={{ color: '#dc2626', fontSize: '13px' }}>{error}</p>
-        )}
-
-        <Button type="submit" disabled={loading} fullWidth>
-          {loading ? 'Entrando...' : 'Iniciar sesión'}
-        </Button>
-
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center' }}>
-          ¿No tienes cuenta?{' '}
-          <a href="/registro" style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-            Regístrate
-          </a>
-        </p>
-      </form>
+      </FormProvider>
     </div>
   )
 }

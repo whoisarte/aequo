@@ -16,8 +16,8 @@ export default function ExpedientesPage() {
   const { expedientes, eliminar, cargando, error, recargar } = useExpedientes()
   const { branding } = useBrandingStore()
 
-  function handleDescargar(expediente: Expediente) {
-    descargarPDF({
+  async function handleDescargar(expediente: Expediente) {
+    await descargarPDF({
       resultado: expediente.resultado,
       datos: {
         nombreEmpleado: expediente.nombreEmpleado,

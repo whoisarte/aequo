@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { CreateCheckoutSessionSchema } from './billing.schema';
 import { supabaseAdmin } from '../supabase/admin';
+import { getOrCreateStripeCustomer } from './stripe-customer';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -44,11 +45,15 @@ export const BillingService = {
       console.error('Product found but no stripe_price_id:', product);
       throw new Error('Producto no encontrado o configuración de precio inválida.');
     }
+
+    // 3. Get or create Stripe customer (idempotent)
+    const customerId = await getOrCreateStripeCustomer(userId, userEmail);
     
-    // 3. Create session
+    // 4. Create checkout session
     try {
       return await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
+        customer: customerId,
         line_items: [
           {
             price: product.stripe_price_id,
@@ -59,7 +64,7 @@ export const BillingService = {
         success_url: mode === 'subscription' 
           ? `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}` 
           : `${origin}/calculadora/download?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/billing?canceled=true`,        customer_email: userEmail,
+        cancel_url: `${origin}/billing?canceled=true`,
         metadata: {
           userId,
           planId,

@@ -2,10 +2,26 @@ import { create } from 'zustand'
 import { getCachedUserId, setCachedBranding } from '@/lib/auth/cache'
 import type { Branding } from '@/lib/pdf/branding'
 
+interface AccessState {
+  canGenerate: boolean
+  reason?: string | null
+  used?: number
+  limit?: number
+  cachedAt?: number
+}
+
+const initialAccessState: AccessState = {
+  canGenerate: false,
+}
+
 interface BrandingStore {
   branding: Branding
   setBranding: (branding: Partial<Branding>) => void
   resetear: () => void
+  // Access state cache
+  accessState: AccessState
+  setAccessState: (state: AccessState) => void
+  getAccessState: () => AccessState | null
 }
 
 const brandingInicial: Branding = {
@@ -19,7 +35,9 @@ const brandingInicial: Branding = {
   porcentajeConciliacion: 50,
 }
 
-export const useBrandingStore = create<BrandingStore>((set) => ({
+const ACCESS_CACHE_TTL_MS = 30 * 1000 // 30 seconds
+
+export const useBrandingStore = create<BrandingStore>((set, get) => ({
   branding: brandingInicial,
   setBranding: (partial) =>
     set((state) => {
@@ -30,5 +48,26 @@ export const useBrandingStore = create<BrandingStore>((set) => ({
       }
       return { branding }
     }),
-  resetear: () => set({ branding: brandingInicial }),
+  resetear: () =>
+    set({ branding: brandingInicial, accessState: initialAccessState }),
+
+  // Access state caching
+  accessState: initialAccessState,
+  setAccessState: (state) =>
+    set(() => ({
+      accessState: {
+        ...state,
+        cachedAt: Date.now(),
+      },
+    })),
+  getAccessState: () => {
+    const state = get().accessState
+    // Check if cache is still valid
+    if (!state.cachedAt) return null
+    const age = Date.now() - state.cachedAt
+    if (age > ACCESS_CACHE_TTL_MS) return null
+    return state
+  },
 }))
+
+

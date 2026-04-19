@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf'
 import type { ResultadoCalculo, DatosEmpleado } from '@/lib/calculos/types'
 import { aplicarEncabezado, aplicarPiePagina, brandingDefault, type Branding } from './branding'
 import { generarComparativo } from './templates/comparativo'
@@ -9,11 +8,22 @@ interface OpcionesGenerador {
   branding?: Branding
 }
 
-export function generarPDF({
+async function loadJsPDF() {
+  const { default: jsPDF } = await import('jspdf')
+  return jsPDF
+}
+
+async function loadHtml2Canvas() {
+  const html2canvas = await import('html2canvas')
+  return html2canvas.default || html2canvas
+}
+
+export async function generarPDF({
   resultado,
   datos,
   branding = brandingDefault,
-}: OpcionesGenerador): jsPDF {
+}: OpcionesGenerador) {
+  const jsPDF = await loadJsPDF()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
 
   const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
@@ -50,7 +60,7 @@ const brandingConDatos: Branding = {
   return doc
 }
 
-export function descargarPDF(opciones: OpcionesGenerador, nombreArchivo: string) {
-  const doc = generarPDF(opciones)
+export async function descargarPDF(opciones: OpcionesGenerador, nombreArchivo: string) {
+  const doc = await generarPDF(opciones)
   doc.save(`${nombreArchivo}.pdf`)
 }

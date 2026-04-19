@@ -14,6 +14,8 @@
   --radius: 8px;
   --sidebar-width: 260px;
   --header-height: 60px;
+  --focus-ring: 2px solid #0a0a0a;
+  --focus-ring-offset: 2px;
 }
 
 /* Forzar que no haya fondos de Next.js */
@@ -35,6 +37,20 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* WCAG 2.1 AA: Focus indicators for all interactive elements */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Ensure links are visibly focusable */
+a {
+  outline-color: var(--accent);
 }
 
 /* --- Layout Estructura --- */
@@ -94,3 +110,4 @@ input, select, textarea, button {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
 }
+

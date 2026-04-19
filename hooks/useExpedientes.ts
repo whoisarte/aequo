@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getCachedUserId, getExpedientesStorageKey, setCachedUserId } from '@/lib/auth/cache'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/lib/toast/index'
 import {
   guardarExpedienteSupabase,
   obtenerExpedientesSupabase,
@@ -57,6 +58,7 @@ async function obtenerExpedientesConTimeout(): Promise<Expediente[]> {
 }
 
 export function useExpedientes() {
+  const toast = useToast()
   const [expedientes, setExpedientes] = useState<Expediente[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -189,24 +191,44 @@ export function useExpedientes() {
       localStorage.setItem(storageKey, JSON.stringify(actualizados))
     }
 
-    const remoto = await guardarExpedienteSupabase(datos, resultado)
+    try {
+      const remoto = await guardarExpedienteSupabase(datos, resultado)
 
-    if (!remoto) return
+      if (!remoto) {
+        toast.error('No se pudo guardar el expediente. Intenta nuevamente.')
+        return
+      }
 
-    const sincronizados = [remoto, ...actualizados.filter((expediente) => expediente.id !== tempId)]
-    setExpedientes(sincronizados)
-    if (storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(sincronizados))
+      const sincronizados = [remoto, ...actualizados.filter((expediente) => expediente.id !== tempId)]
+      setExpedientes(sincronizados)
+      if (storageKey) {
+        localStorage.setItem(storageKey, JSON.stringify(sincronizados))
+      }
+
+      toast.success(`Expediente guardado: ${datos.nombreEmpleado}`)
+    } catch (err) {
+      console.error('Error guardando expediente:', err)
+      toast.error('Error al guardar el expediente. Por favor intenta nuevamente.')
     }
   }
 
   async function eliminar(id: string) {
+    const expediente = expedientes.find(e => e.id === id)
+    const nombreEmpleado = expediente?.nombreEmpleado || 'expediente'
+    
     const actualizados = expedientes.filter(e => e.id !== id)
     setExpedientes(actualizados)
     if (storageKey) {
       localStorage.setItem(storageKey, JSON.stringify(actualizados))
     }
-    await eliminarExpedienteSupabase(id)
+
+    try {
+      await eliminarExpedienteSupabase(id)
+      toast.success(`Expediente eliminado: ${nombreEmpleado}`)
+    } catch (err) {
+      console.error('Error eliminando expediente:', err)
+      toast.error('Error al eliminar el expediente. Por favor intenta nuevamente.')
+    }
   }
 
   return { expedientes, guardar, eliminar, cargando, error, recargar: cargar }

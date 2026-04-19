@@ -2,47 +2,12 @@ import { createClient } from './client'
 import type { PostgrestError, Session } from '@supabase/supabase-js'
 import type { Branding } from '@/lib/pdf/branding'
 import type { ProfileRow } from './types'
+import { withTimeout, createTimeoutFailure } from '@/lib/utils'
 
-const SUPABASE_TIMEOUT_MS = 8000
 const INITIAL_SESSION_WAIT_MS = 1500
 
-function timeoutError(message: string): PostgrestError {
-  return {
-    name: 'PostgrestError',
-    message,
-    details: '',
-    hint: '',
-    code: 'TIMEOUT',
-  }
-}
-
 function timeoutFailure(message: string) {
-  return {
-    data: null,
-    error: timeoutError(message),
-    count: null,
-    status: 408,
-    statusText: 'Request Timeout',
-  }
-}
-
-async function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null
-
-  return new Promise<T>((resolve) => {
-    timer = setTimeout(() => {
-      resolve(fallback)
-    }, SUPABASE_TIMEOUT_MS)
-
-    void promise
-      .then((value) => {
-        if (timer) clearTimeout(timer)
-        resolve(value)
-      }, () => {
-        if (timer) clearTimeout(timer)
-        resolve(fallback)
-      })
-  })
+  return createTimeoutFailure(message)
 }
 
 export type PerfilEstado =
@@ -85,13 +50,7 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<Guardar
           color_primario: branding.colorPrimario,
           porcentaje_conciliacion: branding.porcentajeConciliacion,
         }),
-      {
-        data: null,
-        error: timeoutError('Timeout guardando perfil'),
-        count: null,
-        status: 408,
-        statusText: 'Request Timeout',
-      }
+      timeoutFailure('Timeout guardando perfil')
     )
 
     const { error } = response

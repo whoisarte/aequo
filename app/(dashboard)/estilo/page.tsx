@@ -4,18 +4,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCachedBranding, getCachedUserId } from '@/lib/auth/cache'
 import { useBrandingStore } from '@/store/brandingStore'
 import { guardarPerfilSupabase, obtenerPerfilSupabase } from '@/lib/supabase/perfil'
+import { useToast } from '@/lib/toast/index'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
 export default function EstiloPage() {
   const { branding, setBranding } = useBrandingStore()
+  const toast = useToast()
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
-  const [mensaje, setMensaje] = useState('')
   const [errorCarga, setErrorCarga] = useState('')
   const isMounted = useRef(false)
   const isLoadingProfile = useRef(false)
-  const clearMessageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasCachedBranding = useRef(false)
 
@@ -86,9 +86,6 @@ export default function EstiloPage() {
 
     return () => {
       isMounted.current = false
-      if (clearMessageTimer.current) {
-        clearTimeout(clearMessageTimer.current)
-      }
       if (retryLoadTimer.current) {
         clearTimeout(retryLoadTimer.current)
       }
@@ -99,13 +96,12 @@ export default function EstiloPage() {
     if (guardando) return
 
     setGuardando(true)
-    setMensaje('')
 
     let timeoutActivo = true
     const timer = setTimeout(() => {
       if (!timeoutActivo || !isMounted.current) return
       setGuardando(false)
-      setMensaje('La operación está tardando más de lo esperado.')
+      toast.warning('La operación está tardando más de lo esperado.')
     }, 15000)
 
     try {
@@ -113,24 +109,18 @@ export default function EstiloPage() {
       if (!isMounted.current) return
 
       if (resultado.status === 'ok') {
-        setMensaje('Configuración guardada correctamente')
+        toast.success('Configuración guardada correctamente')
         setErrorCarga('')
-        if (clearMessageTimer.current) {
-          clearTimeout(clearMessageTimer.current)
-        }
-        clearMessageTimer.current = setTimeout(() => {
-          if (isMounted.current) setMensaje('')
-        }, 3000)
       } else if (resultado.status === 'no-session') {
-        setMensaje(resultado.message)
+        toast.error(resultado.message)
         setErrorCarga(resultado.message)
       } else {
-        setMensaje(resultado.message)
+        toast.error(resultado.message)
       }
     } catch (error) {
       console.error('Error en handleGuardar:', error)
       if (isMounted.current) {
-        setMensaje('Ocurrió un error inesperado al guardar.')
+        toast.error('Ocurrió un error inesperado al guardar.')
       }
     } finally {
       timeoutActivo = false
@@ -251,19 +241,6 @@ export default function EstiloPage() {
         </div>
       </section>
 
-      {mensaje && (
-        <p style={{ 
-          fontSize: '13px', 
-          color: mensaje.includes('correctamente') ? '#16a34a' : '#dc2626',
-          padding: '8px 12px',
-          background: mensaje.includes('correctamente') ? '#f0fdf4' : '#fef2f2',
-          borderRadius: 'var(--radius)',
-          border: '1px solid',
-          borderColor: mensaje.includes('correctamente') ? '#bbf7d0' : '#fecaca'
-        }}>
-          {mensaje}
-        </p>
-      )}
 
       <Button onClick={handleGuardar} disabled={guardando} fullWidth>
         {guardando ? 'Guardando...' : 'Guardar configuración'}

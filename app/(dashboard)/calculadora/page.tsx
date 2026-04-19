@@ -35,9 +35,22 @@ export default function CalculadoraPage() {
   // Verificar estado al cargar
   useEffect(() => {
     async function checkStatus() {
+      // Check cache first
+      const cachedAccess = useBrandingStore.getState().getAccessState()
+      if (cachedAccess) {
+        setAccess(cachedAccess)
+        if (!cachedAccess.canGenerate) {
+          const product = await getSingleGenerationDetails()
+          setSingleProduct(product)
+        }
+        return
+      }
+
+      // Cache miss; fetch from server
       const accessStatus = await checkAccess()
       setAccess(accessStatus)
-      
+      useBrandingStore.getState().setAccessState(accessStatus)
+
       if (!accessStatus.canGenerate) {
         const product = await getSingleGenerationDetails()
         setSingleProduct(product)
@@ -75,7 +88,7 @@ export default function CalculadoraPage() {
   async function handleDescargar() {
     if (!resultado) return
     if (!(await validateAccess())) return
-    descargarPDF({ resultado, datos, branding }, `aequo-${datos.nombreEmpleado || 'calculo'}`)
+    await descargarPDF({ resultado, datos, branding }, `aequo-${datos.nombreEmpleado || 'calculo'}`)
   }
 
   async function handleGuardar() {

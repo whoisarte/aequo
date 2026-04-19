@@ -20,7 +20,7 @@ export default function DownloadContent() {
       setLoading(false);
 
       if (sessionId) {
-        descargarPDF(parsed, `aequo-${parsed.datos.nombreEmpleado || 'calculo'}`);
+        void descargarPDF(parsed, `aequo-${parsed.datos.nombreEmpleado || 'calculo'}`);
       }
     }
   }, [sessionId]);
@@ -44,9 +44,9 @@ export default function DownloadContent() {
           <p className="text-sm text-gray-500 mt-2">
             Si la descarga no comenzó,{' '}
             <button 
-              onClick={() => {
+              onClick={async () => {
                 if (data) {
-                  descargarPDF(data, `aequo-${data.datos.nombreEmpleado || 'calculo'}`);
+                  await descargarPDF(data, `aequo-${data.datos.nombreEmpleado || 'calculo'}`);
                 }
               }} 
               className="text-blue-600 underline"
