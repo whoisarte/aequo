@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 import { useToast } from '@/lib/toast/index'
 
 interface Product {
@@ -60,28 +61,19 @@ export default function PaymentSection({ products, isSubscribed }: PaymentSectio
             const generationCount = plan.displayLimit || plan.doc_limit.toLocaleString()
             
             return (
-              <div
-                key={plan.id}
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                      {plan.name}
-                    </h3>
-                    {plan.description && (
-                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                        {plan.description}
-                      </p>
-                    )}
-                  </div>
+              <Card key={plan.id} variant="outline" padding="lg">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                        {plan.name}
+                      </h3>
+                      {plan.description && (
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                          {plan.description}
+                        </p>
+                      )}
+                    </div>
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <p style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
                       ${plan.price_cents / 100}
@@ -106,7 +98,7 @@ export default function PaymentSection({ products, isSubscribed }: PaymentSectio
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {plan.features.map((feature, idx) => (
                       <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        <span style={{ color: '#10b981', marginTop: '2px', flexShrink: 0 }}>✓</span>
+                        <span style={{ color: 'var(--color-success)', marginTop: '2px', flexShrink: 0 }}>✓</span>
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -120,7 +112,8 @@ export default function PaymentSection({ products, isSubscribed }: PaymentSectio
                 >
                   {updatingPlanId === plan.id ? 'Procesando...' : 'Suscribirse'}
                 </Button>
-              </div>
+                </div>
+              </Card>
             )
           })}
       </div>

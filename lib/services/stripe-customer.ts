@@ -7,7 +7,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 /**
  * Get or create a Stripe customer for a user.
- * Ensures idempotency by checking Supabase for existing customer_id first.
+ * Searches Stripe for existing customer with matching userId metadata,
+ * or creates a new one if not found.
  *
  * @param userId Supabase user ID
  * @param email User email address
@@ -18,26 +19,24 @@ export async function getOrCreateStripeCustomer(
   email: string
 ): Promise<string> {
   try {
-    // 1. Check if customer already exists in our DB
-    const { data: user, error: queryError } = await supabaseAdmin
-      .from('users')
-      .select('stripe_customer_id')
-      .eq('id', userId)
-      .maybeSingle()
+    // 1. Search Stripe for existing customer with this userId in metadata
+    console.log(`Searching Stripe for existing customer with userId ${userId}`)
+    const customers = await stripe.customers.list({
+      email,
+      limit: 100,
+    })
 
-    if (queryError && queryError.code !== 'PGRST116') {
-      // PGRST116 = not found (expected for new users)
-      console.error('Error querying user stripe_customer_id:', queryError)
-      throw new Error('Failed to check existing customer: ' + queryError.message)
+    // Find customer with matching userId in metadata
+    const existingCustomer = customers.data.find(
+      (c) => c.metadata?.userId === userId
+    )
+
+    if (existingCustomer) {
+      console.log(`Found existing Stripe customer: ${existingCustomer.id}`)
+      return existingCustomer.id
     }
 
-    // 2. If customer exists in DB, return it
-    if (user?.stripe_customer_id) {
-      console.log(`Using existing Stripe customer: ${user.stripe_customer_id}`)
-      return user.stripe_customer_id
-    }
-
-    // 3. Create new Stripe customer
+    // 2. Create new Stripe customer if not found
     console.log(`Creating new Stripe customer for user ${userId}`)
     const customer = await stripe.customers.create({
       email,
@@ -45,22 +44,6 @@ export async function getOrCreateStripeCustomer(
         userId,
       },
     })
-
-    // 4. Store customer_id in Supabase
-    const { error: updateError } = await supabaseAdmin
-      .from('users')
-      .upsert({
-        id: userId,
-        stripe_customer_id: customer.id,
-      }, {
-        onConflict: 'id',
-      })
-
-    if (updateError) {
-      console.error('Error saving stripe_customer_id to Supabase:', updateError)
-      // Don't throw - we have the customer ID, just couldn't save it
-      // Future calls will create another customer, but checkout will work
-    }
 
     console.log(`Created Stripe customer ${customer.id} for user ${userId}`)
     return customer.id

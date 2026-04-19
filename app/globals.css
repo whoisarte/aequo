@@ -16,6 +16,17 @@
   --header-height: 60px;
   --focus-ring: 2px solid #0a0a0a;
   --focus-ring-offset: 2px;
+  
+  /* Color tokens */
+  --color-success: #10b981;
+  --color-success-light: #dcfce7;
+  --color-success-border: #86efac;
+  --color-error: #ef4444;
+  --color-error-light: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-error-text: #b91c1c;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
 }
 
 /* Forzar que no haya fondos de Next.js */

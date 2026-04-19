@@ -91,27 +91,63 @@ export async function POST(req: NextRequest) {
 
     if (userId && planId) {
       if (mode === 'subscription') {
-        // Update subscription in database
-        const { error, data } = await supabaseAdmin
+        // First, try to find existing subscription for this user
+        const { data: existingSubscription, error: fetchError } = await supabaseAdmin
           .from('subscriptions')
-          .upsert({
-            user_id: userId,
-            plan: planId,
-            status: 'active',
-            stripe_customer_id: session.customer as string,
-            stripe_sub_id: session.subscription as string,
-            current_period_end: new Date().toISOString(),
-          })
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .maybeSingle()
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Error fetching existing subscription:', fetchError)
+          return NextResponse.json(
+            { error: 'Failed to check existing subscription' },
+            { status: 500 }
+          )
+        }
+
+        let result
+
+        if (existingSubscription) {
+          // Update existing subscription
+          console.log(`Updating existing subscription ${existingSubscription.id}`)
+          result = await supabaseAdmin
+            .from('subscriptions')
+            .update({
+              plan: planId,
+              status: 'active',
+              stripe_customer_id: session.customer as string,
+              stripe_sub_id: session.subscription as string,
+              current_period_end: new Date().toISOString(),
+            })
+            .eq('id', existingSubscription.id)
+        } else {
+          // Create new subscription
+          console.log(`Creating new subscription for user ${userId}`)
+          result = await supabaseAdmin
+            .from('subscriptions')
+            .insert({
+              user_id: userId,
+              plan: planId,
+              status: 'active',
+              stripe_customer_id: session.customer as string,
+              stripe_sub_id: session.subscription as string,
+              current_period_end: new Date().toISOString(),
+            })
+        }
+
+        const { error } = result
 
         if (error) {
-          console.error('Error updating subscription in Supabase:', error)
+          console.error('Error updating/creating subscription in Supabase:', error)
           // Return 500 to trigger Stripe retry
           return NextResponse.json(
             { error: 'Database update failed' },
             { status: 500 }
           )
         }
-        console.log('Subscription updated successfully for user:', userId)
+        console.log('Subscription saved successfully for user:', userId)
       } else if (mode === 'payment') {
         console.log(
           `One-time payment successful for user ${userId}, plan ${planId}`

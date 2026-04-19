@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import PaymentSection from '@/components/billing/PaymentSection'
 import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
+import Heading from '@/components/ui/Heading'
 import { useToast } from '@/lib/toast/index'
 import { getBillingPageData } from '@/lib/services/billing-actions.server'
 
@@ -25,6 +28,7 @@ interface GenerationUsage {
 
 export default function BillingPage() {
   const toast = useToast()
+  const searchParams = useSearchParams()
   
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -86,9 +90,9 @@ export default function BillingPage() {
     }
 
     loadData()
-  }, [toast])
+  }, [toast, searchParams])
 
-  async function handleUpgrade(planId: string) {
+    async function handleUpgrade(planId: string) {
     setUpdatingPlanId(planId)
     try {
       const response = await fetch('/api/billing/checkout', {
@@ -100,18 +104,22 @@ export default function BillingPage() {
         }).toString()
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to create checkout session')
+        throw new Error(data.error || 'Error al procesar la actualización')
       }
 
-      const { url } = await response.json()
-      if (url) {
+      if (data.url) {
         toast.success('Redirigiendo a pago...')
-        window.location.href = url
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL returned')
       }
     } catch (err) {
       console.error('Error upgrading plan:', err)
-      toast.error('Error al procesar la actualización. Intenta nuevamente.')
+      const message = err instanceof Error ? err.message : 'Error al procesar la actualización. Intenta nuevamente.'
+      toast.error(message)
     } finally {
       setUpdatingPlanId(null)
     }
@@ -168,15 +176,15 @@ export default function BillingPage() {
   if (error) {
     return (
       <div style={{
-        border: '1px solid #fecaca',
+        border: '1px solid var(--color-error-border)',
         borderRadius: 'var(--radius)',
         padding: '24px',
-        background: '#fef2f2',
+        background: 'var(--color-error-light)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px'
       }}>
-        <p style={{ color: '#b91c1c' }}>{error}</p>
+        <p style={{ color: 'var(--color-error-text)' }}>{error}</p>
         <div>
           <button
             type="button"
@@ -184,9 +192,9 @@ export default function BillingPage() {
             style={{
               padding: '8px 14px',
               borderRadius: 'var(--radius)',
-              border: '1px solid #fecaca',
+              border: '1px solid var(--color-error-border)',
               background: '#fff',
-              color: '#991b1b',
+              color: 'var(--color-error-text)',
               fontSize: '13px',
               cursor: 'pointer',
               fontWeight: '500'
@@ -208,9 +216,9 @@ export default function BillingPage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '560px' }}>
         <div>
-          <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+          <Heading level={1} style={{ marginBottom: '4px' }}>
             Tu Membresía
-          </h1>
+          </Heading>
           <p style={{ color: 'var(--text-secondary)' }}>
             Plan activo: {currentPlan?.name || 'Membresía Activa'}
           </p>
@@ -218,23 +226,16 @@ export default function BillingPage() {
 
         {/* Generation Usage */}
         {generationUsage && (
-          <div style={{
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
+          <Card variant="outline" padding="md">
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               marginBottom: '4px'
             }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+              <Heading level={3}>
                 Generaciones disponibles
-              </h3>
+              </Heading>
               <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                 {generationUsage.used || 0} de {generationUsage.limit || 0}
               </span>
@@ -251,7 +252,7 @@ export default function BillingPage() {
               <div style={{
                 height: '100%',
                 width: `${usedPercentage}%`,
-                backgroundColor: usedPercentage > 80 ? '#ef4444' : '#3b82f6',
+                backgroundColor: usedPercentage > 80 ? 'var(--color-error)' : 'var(--color-info)',
                 transition: 'width 0.3s ease'
               }} />
             </div>
@@ -259,7 +260,7 @@ export default function BillingPage() {
             <p style={{ fontSize: '12px', color: 'var(--text-hint)' }}>
               {generationUsage.limit ? `${generationUsage.limit - (generationUsage.used || 0)} generaciones restantes` : 'Cargando...'}
             </p>
-          </div>
+          </Card>
         )}
 
         {upgradePlans.length > 0 ? (
@@ -276,22 +277,17 @@ export default function BillingPage() {
                   ?.[0] || 'Ilimitado'
 
                 return (
-                  <div
-                    key={plan.id}
-                    style={{
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius)',
-                      padding: '16px',
+                  <Card key={plan.id} variant="outline" padding="md">
+                    <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: '16px'
-                    }}
-                  >
+                    }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <h4 style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                      <Heading level={4}>
                         {plan.name}
-                      </h4>
+                      </Heading>
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                         {docCount} generaciones/mes • ${plan.price_cents / 100} MXN
                       </p>
@@ -302,7 +298,8 @@ export default function BillingPage() {
                     >
                       {updatingPlanId === plan.id ? 'Procesando...' : 'Actualizar'}
                     </Button>
-                  </div>
+                    </div>
+                  </Card>
                 )
               })}
             </div>
@@ -311,10 +308,10 @@ export default function BillingPage() {
           <div style={{
             padding: '16px',
             borderRadius: 'var(--radius)',
-            background: '#dcfce7',
-            border: '1px solid #86efac'
+            background: 'var(--color-success-light)',
+            border: '1px solid var(--color-success-border)'
           }}>
-            <p style={{ color: '#166534', fontWeight: '500' }}>
+            <p style={{ color: 'var(--color-success)', fontWeight: '500' }}>
               ¡Tienes el plan más avanzado!
             </p>
           </div>
@@ -345,9 +342,9 @@ export default function BillingPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
       <div>
-        <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+        <Heading level={1} style={{ marginBottom: '4px' }}>
           Planes y Membresías
-        </h1>
+        </Heading>
         <p style={{ color: 'var(--text-secondary)' }}>
           Elige el plan que mejor se adapte a tu despacho.
         </p>
