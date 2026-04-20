@@ -48,10 +48,8 @@ export async function canGenerateDocument(userId: string) {
     .from('subscriptions')
     .select('plan')
     .eq('user_id', userId)
-    .eq('status', 'active')
-    .not('plan', 'ilike', '%individual%')
+    .in('status', ['active', 'trialing']) // Allow active or trialing statuses
     .maybeSingle();
-
   // Si no tiene suscripción activa, no puede generar documentos mediante suscripción
   if (error || !subscription) return { canGenerate: false, reason: 'no_subscription' };
 

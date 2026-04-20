@@ -26,13 +26,38 @@ interface GenerationUsage {
   reason?: string | null
 }
 
+// Placeholder types (assuming these are defined elsewhere)
+type User = any;
+type Subscription = { plan: any; status: any; current_period_end: any; };
+
+// Define the structure for a successful result from getBillingPageData
+type BillingPageSuccessResult = {
+  user: User;
+  subscription: Subscription | null;
+  plans: Plan[];
+  generationUsage: GenerationUsage | null;
+};
+
+// Define the structure for an error result from getBillingPageData
+type BillingPageErrorResult = {
+  error: string;
+  user: null;
+  subscription: null;
+  plans: [];
+  generationUsage: null;
+};
+
+// Union type for the return value of getBillingPageData
+type BillingPageResult = BillingPageSuccessResult | BillingPageErrorResult;
+
+
 export default function BillingPage() {
   const toast = useToast()
   const searchParams = useSearchParams()
   
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
-  const [subscription, setSubscription] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null) // Typed as User | null
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [upgradePlans, setUpgradePlans] = useState<Plan[]>([])
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null)
@@ -47,22 +72,31 @@ export default function BillingPage() {
         setError('')
         
         const result = await getBillingPageData()
+        console.log('BillingPage useEffect: Received result from getBillingPageData:', JSON.stringify(result, null, 2)); // Added log
         
-        if (result.error) {
-          setError(result.error)
-          toast.error('Error al cargar datos de membresía')
-          return
+        // Type guard to check if the result is an error object.
+        // We check if 'error' property exists and is truthy.
+        // This condition will only be true if result conforms to BillingPageErrorResult.
+        if ('error' in result && result.error) {
+            setError(result.error);
+            toast.error('Error al cargar datos de membresía');
+            setLoading(false); // Ensure loading is false in error case too
+            return;
         }
 
+        // If we reach here, TypeScript knows 'result' must be BillingPageSuccessResult.
+        // The original 'if (!result.user)' check is still relevant for cases where user might be null
+        // even if no error was explicitly thrown by getBillingPageData (e.g., user logged out mid-fetch).
         if (!result.user) {
-          setUser(null)
-          setLoading(false)
-          return
+            setUser(null);
+            setLoading(false);
+            return;
         }
-
-        setUser(result.user)
-        setSubscription(result.subscription)
-        setGenerationUsage(result.generationUsage)
+        
+        // Now, 'result' is definitely BillingPageSuccessResult and 'result.user' is not null
+        setUser(result.user);
+        setSubscription(result.subscription);
+        setGenerationUsage(result.generationUsage);
 
         const plansWithCurrency = result.plans.map(p => ({
           ...p,
@@ -71,7 +105,8 @@ export default function BillingPage() {
         
         setPlans(plansWithCurrency)
 
-        if (result.subscription && result.subscription.status === 'active') {
+        // Check for active or trialing subscriptions for display purposes
+        if (result.subscription && (result.subscription.status === 'active' || result.subscription.status === 'trialing')) {
           const current = plansWithCurrency.find(p => p.id.trim() === (result.subscription?.plan || '').trim())
           setCurrentPlan(current || null)
           
@@ -81,7 +116,7 @@ export default function BillingPage() {
           setUpgradePlans(upgrades)
         }
       } catch (err) {
-        console.error('Error loading billing data:', err)
+        console.error('Error loading billing data:', err) // Keep original catch block logging
         setError('No se pudo cargar los datos de membresía. Intenta nuevamente.')
         toast.error('Error al cargar datos de membresía')
       } finally {
@@ -129,15 +164,24 @@ export default function BillingPage() {
     setLoading(true)
     setError('')
     const result = await getBillingPageData()
-    if (!result.error) {
-      setUser(result.user)
-      setSubscription(result.subscription)
-      setGenerationUsage(result.generationUsage)
-      setPlans(result.plans.map(p => ({ ...p, currency: 'mxn' })) as Plan[])
-    } else {
-      setError(result.error)
+    // The result here needs to be typed correctly to handle potential 'error' property
+    // We can use a type guard similar to the useEffect block for safety.
+    if ('error' in result && result.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
     }
-    setLoading(false)
+    // If it's not an error, it should be the success type (or at least have user property)
+    if (!result.user) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    setUser(result.user);
+    setSubscription(result.subscription);
+    setGenerationUsage(result.generationUsage);
+    setPlans(result.plans.map(p => ({ ...p, currency: 'mxn' })) as Plan[]);
+    setLoading(false);
   }
 
   // Loading
@@ -172,7 +216,7 @@ export default function BillingPage() {
     )
   }
 
-  // Error
+  // Error display (after checking for result.error and result.user)
   if (error) {
     return (
       <div style={{
@@ -208,7 +252,8 @@ export default function BillingPage() {
   }
 
   // Active subscription with upgrade options
-  if (subscription && subscription.status === 'active') {
+  // The condition to check for active/trialing subscription is already in place from previous changes.
+  if (subscription && (subscription.status === 'active' || subscription.status === 'trialing')) {
     const usedPercentage = generationUsage?.used && generationUsage?.limit 
       ? Math.round((generationUsage.used / generationUsage.limit) * 100)
       : 0

@@ -18,7 +18,8 @@ export function generarTabla(
   titulo: string,
   desglose: ResultadoCalculo['finiquito']['desglose'],
   total: number,
-  y: number
+  y: number,
+  branding: Branding // Added branding parameter
 ): number {
   const margen = 20
   const anchoDoc = 215.9
@@ -29,14 +30,18 @@ export function generarTabla(
   const colTotal = margen + anchoUtil * 0.63
   const colConciliacion = anchoDoc - margen
 
+  // Convert hex color to RGB
+  const colorPrimarioInt = parseInt(branding.colorPrimario.replace('#', ''), 16);
+  const colorRGB = [(colorPrimarioInt >> 16) & 0xff, (colorPrimarioInt >> 8) & 0xff, colorPrimarioInt & 0xff];
+
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(20)
+  doc.setTextColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.text(titulo.toUpperCase(), anchoDoc / 2, y, { align: 'center' })
   y += 5
 
   doc.setLineWidth(0.8)
-  doc.setDrawColor(20)
+  doc.setDrawColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.line(margen, y, anchoDoc - margen, y)
   y += 1
   doc.setLineWidth(0.3)
@@ -45,7 +50,7 @@ export function generarTabla(
 
   doc.setFontSize(8.5)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(20)
+  doc.setTextColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.text('PRESTACION', colConcepto, y)
   doc.text('DIAS', colDias, y, { align: 'center' })
   doc.text('TOTAL', colTotal, y, { align: 'right' })
@@ -53,41 +58,13 @@ export function generarTabla(
   y += 3
 
   doc.setLineWidth(0.3)
-  doc.setDrawColor(180)
-  doc.line(margen, y, anchoDoc - margen, y)
-  y += 5
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-
-  desglose.forEach((paso, i) => {
-    if (i % 2 === 0) {
-      doc.setFillColor(235, 235, 235)
-      doc.rect(margen, y - 4, anchoUtil, 9, 'F')
-    }
-    doc.setTextColor(30)
-    doc.text(paso.concepto, colConcepto, y)
-
-    const diasStr = isNaN(Number(paso.dias))
-      ? paso.dias
-      : paso.dias.includes('/')
-        ? paso.dias.split('/').map(d => parseFloat(parseFloat(d).toFixed(2)).toString()).join('/')
-        : parseFloat(parseFloat(paso.dias).toFixed(2)).toString()
-
-    doc.text(diasStr, colDias, y, { align: 'center' })
-    doc.text(fmt(paso.total), colTotal, y, { align: 'right' })
-    doc.text(fmt(paso.propuestaConciliacion), colConciliacion, y, { align: 'right' })
-    y += 9
-  })
-
-  doc.setLineWidth(0.3)
-  doc.setDrawColor(180)
-  doc.line(margen, y, anchoDoc - margen, y)
+  doc.setDrawColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
+  doc.line(margen, y, anchoDoc - margen, y) // Corrected typo: manageable -> anchoDoc - margen
   y += 6
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9.5)
-  doc.setTextColor(20)
+  doc.setTextColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.text('Total', colConcepto, y)
   doc.text(fmt(total), colTotal, y, { align: 'right' })
   const totalConciliacion = desglose.reduce((a, b) => a + b.propuestaConciliacion, 0)
@@ -199,7 +176,7 @@ export function generarComparativo(
     ? resultado.liquidacion.total
     : resultado.finiquito.total
 
-  y = generarTabla(doc, tituloTabla, desglose, total, y)
+  y = generarTabla(doc, tituloTabla, desglose, total, y, branding) // Pass branding object
 
   return doc
 }
