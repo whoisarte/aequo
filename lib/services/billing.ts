@@ -62,7 +62,7 @@ export const BillingService = {
         ],
         mode: mode,
         success_url: mode === 'subscription' 
-          ? `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}` 
+          ? `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&planId=${planId}` 
           : `${origin}/calculadora/download?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/billing?canceled=true`,
         metadata: {

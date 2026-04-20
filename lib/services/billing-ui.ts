@@ -37,15 +37,21 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
 }
 
 export async function getUserSubscription(userId: string) {
-  // Aseguramos que solo traiga registros que sean explícitamente suscripciones
-  // y que no tengan el modo 'payment' (pago único)
-  const { data, error } = await supabaseAdmin
+  // Ensure we only keep the newest subscription and delete others
+  const { data: allSubs, error: fetchError } = await supabaseAdmin
     .from('subscriptions')
-    .select('plan, status, current_period_end')
+    .select('id, plan, status, current_period_end, created_at')
     .eq('user_id', userId)
-    .in('status', ['active', 'trialing']) // Allow active or trialing statuses
-    .maybeSingle();
+    .in('status', ['active', 'trialing'])
+    .order('created_at', { ascending: false });
 
-  if (error || !data) return null;
-  return data;
+  if (fetchError || !allSubs || allSubs.length === 0) return null;
+
+  // Cleanup: Delete duplicates
+  if (allSubs.length > 1) {
+    const idsToDelete = allSubs.slice(1).map(s => s.id);
+    await supabaseAdmin.from('subscriptions').delete().in('id', idsToDelete);
+  }
+
+  return allSubs[0];
 }

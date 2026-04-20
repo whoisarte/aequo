@@ -92,12 +92,15 @@ export async function POST(req: NextRequest) {
     if (userId && planId) {
       if (mode === 'subscription') {
         // First, try to find existing subscription for this user
+        console.log(`Searching for existing subscription for user: ${userId}`);
         const { data: existingSubscription, error: fetchError } = await supabaseAdmin
           .from('subscriptions')
-          .select('id')
+          .select('id, status')
           .eq('user_id', userId)
-          .eq('status', 'active')
+          .in('status', ['active', 'trialing'])
           .maybeSingle()
+
+        console.log('Existing subscription search result:', existingSubscription);
 
         if (fetchError && fetchError.code !== 'PGRST116') {
           console.error('Error fetching existing subscription:', fetchError)
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest) {
 
         if (existingSubscription) {
           // Update existing subscription
-          console.log(`Updating existing subscription ${existingSubscription.id}`)
+          console.log(`Updating existing subscription ${existingSubscription.id} to plan ${planId}`)
           result = await supabaseAdmin
             .from('subscriptions')
             .update({

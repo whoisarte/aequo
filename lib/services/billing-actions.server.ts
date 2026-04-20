@@ -40,8 +40,6 @@ export async function getBillingPageData(): Promise<BillingPageResult> { // Upda
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      console.log('getBillingPageData: No user found. Returning error structure.') // Log for clarity
-      // Return structure conforming to error type
       return {
         error: 'No user session found',
         user: null,
@@ -50,8 +48,6 @@ export async function getBillingPageData(): Promise<BillingPageResult> { // Upda
         generationUsage: null
       };
     }
-
-    console.log('getBillingPageData: User found. Fetching subscription, plans, and access status...')
 
     const subscription = await getUserSubscription(user.id)
     const allPlans = await getPricingPlans()
@@ -65,7 +61,6 @@ export async function getBillingPageData(): Promise<BillingPageResult> { // Upda
       plans,
       generationUsage: accessStatus
     };
-    console.log('getBillingPageData: Fetched data:', JSON.stringify(resultData, null, 2));
     return resultData;
   } catch (error) {
     console.error('getBillingPageData: Error in getBillingPageData:', error);

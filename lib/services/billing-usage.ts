@@ -29,29 +29,53 @@ export async function getSingleGenerationProduct() {
 }
 
 export async function getUserDocumentCount(userId: string): Promise<number> {
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  // 1. Get user's active subscription start date
+  const { data: subscription } = await supabaseAdmin
+    .from('subscriptions')
+    .select('created_at')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const startDate = subscription?.created_at || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+  console.log('Counting documents for:', userId, 'since:', startDate);
 
   const { count, error } = await supabaseAdmin
     .from('expedientes')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .gte('created_at', startOfMonth.toISOString());
+    .gte('created_at', startDate);
+
+  if (error) {
+    console.error('Error counting documents:', error);
+  } else {
+    console.log('Count returned:', count);
+  }
 
   return error ? 0 : (count || 0);
 }
 
 export async function canGenerateDocument(userId: string) {
-  // 1. Obtener la suscripción activa
-  const { data: subscription, error } = await supabaseAdmin
+  // 1. Obtener todas las suscripciones y limpiar duplicados
+  const { data: allSubs, error } = await supabaseAdmin
     .from('subscriptions')
-    .select('plan')
+    .select('id, plan, status, created_at')
     .eq('user_id', userId)
-    .in('status', ['active', 'trialing']) // Allow active or trialing statuses
-    .maybeSingle();
-  // Si no tiene suscripción activa, no puede generar documentos mediante suscripción
-  if (error || !subscription) return { canGenerate: false, reason: 'no_subscription' };
+    .in('status', ['active', 'trialing'])
+    .order('created_at', { ascending: false });
+
+  if (error || !allSubs || allSubs.length === 0) return { canGenerate: false, reason: 'no_subscription' };
+  
+  // Cleanup duplicates
+  if (allSubs.length > 1) {
+    const idsToDelete = allSubs.slice(1).map(s => s.id);
+    await supabaseAdmin.from('subscriptions').delete().in('id', idsToDelete);
+  }
+  
+  const subscription = allSubs[0];
 
   // 2. Obtener el límite del plan contratado
   const { data: product } = await supabaseAdmin

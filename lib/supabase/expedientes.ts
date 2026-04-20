@@ -79,10 +79,14 @@ export async function guardarExpedienteSupabase(
     const supabase = createClient()
     const sessionResult = await getSessionWithInitialWait(supabase)
     const { data: { session } } = sessionResult
-    if (!session?.user) return null
+    if (!session?.user) {
+      console.log('guardarExpedienteSupabase: No session found');
+      return null;
+    }
 
-    const response = await withTimeout(
-      supabase
+    console.log('guardarExpedienteSupabase: Attempting insert for user:', session.user.id);
+    
+    const response = await supabase
         .from('expedientes')
         .insert({
           user_id: session.user.id,
@@ -92,13 +96,16 @@ export async function guardarExpedienteSupabase(
           resultado: resultado,
         })
         .select('*')
-        .maybeSingle(),
-      timeoutFailure('Timeout guardando expediente')
-    )
+        .maybeSingle();
 
-    const { data, error } = response
+    const { data, error } = response;
 
-    if (error || !data) throw error ?? new Error('No se pudo guardar el expediente')
+    if (error) {
+      console.error('guardarExpedienteSupabase: DB Error:', error);
+      throw error;
+    }
+    
+    console.log('guardarExpedienteSupabase: Insert success!', data);
     return mapExpedienteRow(data as ExpedienteRow)
   } catch (err) {
     console.error('Error guardando expediente:', err)

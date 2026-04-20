@@ -72,7 +72,6 @@ export default function BillingPage() {
         setError('')
         
         const result = await getBillingPageData()
-        console.log('BillingPage useEffect: Received result from getBillingPageData:', JSON.stringify(result, null, 2)); // Added log
         
         // Type guard to check if the result is an error object.
         // We check if 'error' property exists and is truthy.

@@ -12,11 +12,13 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     let pollAttempts = 0;
-    const maxAttempts = 30; // ~30 seconds (1s intervals) - wait longer for webhook
+    const maxAttempts = 30;
+    const planId = new URLSearchParams(window.location.search).get('planId');
 
     async function checkSubscription() {
       try {
-        const response = await fetch('/api/billing/check-subscription');
+        const url = planId ? `/api/billing/check-subscription?planId=${planId}` : '/api/billing/check-subscription';
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to check subscription');
         
         const data = await response.json();

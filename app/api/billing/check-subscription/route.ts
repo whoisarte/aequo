@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+    const expectedPlanId = req.nextUrl.searchParams.get('planId')
 
     if (!user) {
       return NextResponse.json({ isActive: false, error: 'Not authenticated' }, { status: 401 })
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
       .from('subscriptions')
       .select('status, plan')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'trialing'])
       .maybeSingle()
 
     if (error) {
@@ -27,10 +28,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ isActive: false, error: 'Database error' }, { status: 500 })
     }
 
+    // Verify if subscription exists and if plan matches (if provided)
+    const isActive = !!data && (!expectedPlanId || data.plan.trim() === expectedPlanId.trim())
+
     return NextResponse.json({
-      isActive: !!data,
+      isActive,
       plan: data?.plan || null,
-      message: data ? 'Subscription is active' : 'No active subscription found'
+      message: isActive ? 'Subscription is active' : 'No active subscription found for this plan'
     })
   } catch (error) {
     console.error('Unexpected error in check-subscription:', error)

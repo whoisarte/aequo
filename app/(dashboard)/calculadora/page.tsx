@@ -85,16 +85,24 @@ export default function CalculadoraPage() {
     return false
   }
 
+  async function refreshAccess() {
+    const newAccess = await checkAccess()
+    setAccess(newAccess)
+    useBrandingStore.getState().setAccessState(newAccess)
+  }
+
   async function handleDescargar() {
     if (!resultado) return
     if (!(await validateAccess())) return
     await descargarPDF({ resultado, datos, branding }, `aequo-${datos.nombreEmpleado || 'calculo'}`)
+    await refreshAccess()
   }
 
   async function handleGuardar() {
     if (!resultado) return
     if (!(await validateAccess())) return
-    guardar(datos, resultado)
+    await guardar(datos, resultado)
+    await refreshAccess()
   }
 
   async function handlePaymentClick() {
@@ -150,6 +158,30 @@ export default function CalculadoraPage() {
     )
   }
 
+  const hasRegisteredGeneration = useRef(false);
+
+  async function handleCalcular() {
+    if (!(await validateAccess())) return
+    
+    // Reset generation registration for this new calculation session
+    hasRegisteredGeneration.current = false;
+    
+    calcular()
+  }
+
+  // Effect to register generation when resultado changes
+  useEffect(() => {
+    async function autoSave() {
+      if (resultado && datos && !hasRegisteredGeneration.current) {
+        await guardar(datos, resultado)
+        await refreshAccess()
+        hasRegisteredGeneration.current = true; // Mark as registered
+      }
+    }
+    // Only auto-save if we don't have a record yet
+    autoSave()
+  }, [resultado])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
       <div>
@@ -164,7 +196,7 @@ export default function CalculadoraPage() {
         onCambio={actualizarDato}
         onTogglePeriodo={togglePeriodo}
         onActualizarPeriodo={actualizarPeriodo}
-        onCalcular={calcular}
+        onCalcular={handleCalcular}
         onResetear={resetear}
       />
 

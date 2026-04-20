@@ -169,6 +169,7 @@ export function useExpedientes() {
   }, [cargar, isHydrated, leerExpedientesLocales, storageKey])
 
   async function guardar(datos: DatosEmpleado, resultado: ResultadoCalculo) {
+    console.log('useExpedientes: guardar() was called');
     const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
     const tempId = crypto.randomUUID()
     const nuevoTemporal: Expediente = {
