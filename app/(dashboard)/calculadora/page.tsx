@@ -8,6 +8,7 @@ import { descargarPDF } from '@/lib/pdf/generator'
 import FormularioEmpleado from '@/components/calculadora/FormularioEmpleado'
 import TablaComparativa from '@/components/calculadora/TablaComparativa'
 import Button from '@/components/ui/Button'
+import Heading from '@/components/ui/Heading'
 import PaywallModal from '@/components/ui/PaywallModal'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
 import { getSubscriptionStatus, getSingleGenerationDetails, checkAccess } from '@/lib/services/billing-actions'
@@ -158,29 +159,12 @@ export default function CalculadoraPage() {
     )
   }
 
-  const hasRegisteredGeneration = useRef(false);
+  const fmt = (n: number) =>
+    n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
 
   async function handleCalcular() {
-    if (!(await validateAccess())) return
-    
-    // Reset generation registration for this new calculation session
-    hasRegisteredGeneration.current = false;
-    
     calcular()
   }
-
-  // Effect to register generation when resultado changes
-  useEffect(() => {
-    async function autoSave() {
-      if (resultado && datos && !hasRegisteredGeneration.current) {
-        await guardar(datos, resultado)
-        await refreshAccess()
-        hasRegisteredGeneration.current = true; // Mark as registered
-      }
-    }
-    // Only auto-save if we don't have a record yet
-    autoSave()
-  }, [resultado])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
@@ -205,28 +189,31 @@ export default function CalculadoraPage() {
           ref={resultadosRef}
           style={{ borderTop: '1px solid var(--border)', paddingTop: '40px', scrollMarginTop: '20px' }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600' }}>Resultado comparativo</h2>
-            {access.canGenerate ? (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Button onClick={handleDescargar}>Descargar PDF</Button>
-                <Button variant="secondary" onClick={handleGuardar}>Guardar expediente</Button>
-                <Button variant="secondary" onClick={handleWhatsApp}>WhatsApp</Button>
-                <Button variant="secondary" onClick={handleCorreo}>Correo</Button>
-              </div>
-            ) : (
-              <Button onClick={handlePaymentClick}>Ver resumen y pagar ($50 MXN)</Button>
-            )}
-          </div>
-          
           {access.canGenerate ? (
-            <TablaComparativa resultado={resultado} />
+            <>
+              <div style={{ padding: '24px', background: 'var(--bg-surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '24px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Tu liquidación estimada es de:</p>
+                <Heading level={2}>{fmt(resultado.finiquito.total + resultado.liquidacion.total)}</Heading>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '600' }}>Detalle parcial</h2>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button onClick={handleDescargar}>Descargar PDF</Button>
+                  <Button variant="secondary" onClick={handleGuardar}>Guardar expediente</Button>
+                  <Button variant="secondary" onClick={handleWhatsApp}>WhatsApp</Button>
+                  <Button variant="secondary" onClick={handleCorreo}>Correo</Button>
+                </div>
+              </div>
+              
+              <TablaComparativa resultado={resultado} summaryOnly={true} />
+            </>
           ) : (
-            <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
+            <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center mt-6">
               <p className="text-gray-600 mb-4">
-                El resumen del cálculo está oculto. Realiza un pago único o suscríbete para verlo.
+                Tu liquidación estimada es de {fmt(resultado.finiquito.total + resultado.liquidacion.total)}. El desglose detallado está oculto. Realiza un pago único o suscríbete para verlo.
               </p>
-              <Button onClick={handlePaymentClick}>Desbloquear resumen ($50 MXN)</Button>
+              <Button onClick={handlePaymentClick}>Desbloquear resumen detallado ($50 MXN)</Button>
             </div>
           )}
         </div>
