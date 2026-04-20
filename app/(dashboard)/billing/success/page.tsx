@@ -119,16 +119,20 @@ export default function PaymentSuccessPage() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '16px'
+            gap: '16px',
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden'
           }}>
-            <svg style={{ width: '20px', height: '20px', color: 'var(--color-success)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg style={{ width: '48px', height: '48px', color: 'var(--color-success)', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
             <h1 style={{
               fontSize: '20px',
               fontWeight: '600',
               color: 'var(--color-success)',
-              margin: 0
+              margin: 0,
+              textAlign: 'center'
             }}>
               ¡Pago Exitoso!
             </h1>
