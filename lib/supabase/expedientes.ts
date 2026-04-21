@@ -22,6 +22,7 @@ function mapExpedienteRow(e: ExpedienteRow): Expediente {
     salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
     tipoDocumento: e.datos_calculo?.tipoDocumento ?? 'despido',
     resultado: e.resultado,
+    datosCalculo: e.datos_calculo!,
     creadoEn: e.created_at,
   }
 }

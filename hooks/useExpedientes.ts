@@ -19,6 +19,7 @@ export interface Expediente {
   salarioDiario: number
   tipoDocumento: string
   resultado: ResultadoCalculo
+  datosCalculo: DatosEmpleado
   creadoEn: string
   pendiente?: boolean
 }
@@ -181,7 +182,8 @@ export function useExpedientes() {
       fechaSalida: datos.fechaSalida,
       salarioDiario: ultimoPeriodo?.salarioDiario ?? 0,
       tipoDocumento: datos.tipoDocumento,
-      resultado,
+      resultado: resultado,
+      datosCalculo: datos,
       creadoEn: new Date().toISOString(),
       pendiente: true,
     }

@@ -15,29 +15,15 @@ function normalizarTipoDocumento(tipo: string): TipoDocumento {
 export default function ExpedientesPage() {
   const { expedientes, eliminar, cargando, error, recargar } = useExpedientes()
   const { branding } = useBrandingStore()
+async function handleDescargar(expediente: Expediente) {
+  if (!expediente.resultado) return
 
-  async function handleDescargar(expediente: Expediente) {
-    await descargarPDF({
-      resultado: expediente.resultado,
-      datos: {
-        nombreEmpleado: expediente.nombreEmpleado,
-        puestoEmpleado: expediente.puestoEmpleado,
-        empresa: expediente.empresa,
-        fechaIngreso: expediente.fechaIngreso,
-        fechaSalida: expediente.fechaSalida,
-        tipoDocumento: normalizarTipoDocumento(expediente.tipoDocumento),
-        periodos: [{
-          anio: new Date(expediente.fechaSalida).getFullYear(),
-          salarioDiario: expediente.salarioDiario,
-          diasVacacionesUsados: 0,
-          aplicaVacaciones: true,
-          aplicaPrimaVacacional: true,
-          aplicaAguinaldo: true,
-        }],
-      },
-      branding,
-    }, `aequo-${expediente.nombreEmpleado}`)
-  }
+  await descargarPDF({
+    resultado: expediente.resultado,
+    datos: expediente.datosCalculo,
+    branding,
+  }, `aequo-${expediente.nombreEmpleado}`)
+}
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

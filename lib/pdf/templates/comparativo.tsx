@@ -60,6 +60,34 @@ export function generarTabla(
   doc.setLineWidth(0.3)
   doc.setDrawColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.line(margen, y, anchoDoc - margen, y) // Corrected typo: manageable -> anchoDoc - margen
+  y += 5
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+
+  desglose.forEach((paso, i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(235, 235, 235)
+      doc.rect(margen, y - 4, anchoUtil, 9, 'F')
+    }
+    doc.setTextColor(30)
+    doc.text(paso.concepto, colConcepto, y)
+
+    const diasStr = isNaN(Number(paso.dias))
+      ? paso.dias
+      : paso.dias.includes('/')
+        ? paso.dias.split('/').map(d => parseFloat(parseFloat(d).toFixed(2)).toString()).join('/')
+        : parseFloat(parseFloat(paso.dias).toFixed(2)).toString()
+
+    doc.text(diasStr, colDias, y, { align: 'center' })
+    doc.text(fmt(paso.total), colTotal, y, { align: 'right' })
+    doc.text(fmt(paso.propuestaConciliacion), colConciliacion, y, { align: 'right' })
+    y += 9
+  })
+
+  doc.setLineWidth(0.3)
+  doc.setDrawColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
+  doc.line(margen, y, anchoDoc - margen, y)
   y += 6
 
   doc.setFont('helvetica', 'bold')
