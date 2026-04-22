@@ -261,19 +261,6 @@ export default function EstiloPage() {
         </div>
       </section>
 
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-          Color del encabezado
-        </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <input type="color" value={branding.colorPrimario}
-            onChange={e => setBranding({ colorPrimario: e.target.value })}
-            style={{ width: '40px', height: '40px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', cursor: 'pointer', padding: '2px' }} />
-          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{branding.colorPrimario}</span>
-        </div>
-      </section>
-
-
       <Button onClick={handleGuardar} disabled={guardando} fullWidth>
         {guardando ? 'Guardando...' : 'Guardar configuración'}
       </Button>

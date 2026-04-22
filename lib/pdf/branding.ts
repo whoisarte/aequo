@@ -33,24 +33,26 @@ export function aplicarEncabezado(
   const margen = 20
   const anchoDoc = 215.9
 
-  // Logo a la izquierda - Aumentado y centrado verticalmente
+  // Logo a la izquierda - Aumentado, centrado verticalmente y con proporción respetada (aspectFit)
   if (branding.logoUrl) {
     try {
       const imgProps = doc.getImageProperties(branding.logoUrl)
-      const maxWidth = 55 // Aumentado de 40 a 55
-      const maxHeight = 22 // Aumentado de 15 a 22
-      const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height)
-      const width = imgProps.width * ratio
-      const height = imgProps.height * ratio
       
-      // Posición X fija al margen
-      const x = margen
+      // Definir caja contenedora (Bounding Box)
+      const maxW = 65 // Tamaño balanceado para evitar colisión con texto centrado
+      const maxH = 28 // Altura máxima para no tocar las líneas
       
-      // Centrar verticalmente en el espacio superior (aprox 35mm antes de las líneas)
-      // El espacio disponible es desde y=5 hasta y=33 (donde empiezan las líneas)
-      const yCentro = 5 + (28 - height) / 2
+      // Cálculo de Aspect Fit (Proporción)
+      const ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height)
+      const w = imgProps.width * ratio
+      const h = imgProps.height * ratio
       
-      doc.addImage(branding.logoUrl, 'PNG', x, yCentro, width, height, undefined, 'FAST')
+      // Centrado Vertical en el área del encabezado (y=5 a y=38)
+      const areaInicio = 5
+      const areaFin = 35 // Margen de seguridad antes de la línea en 38
+      const yCentro = areaInicio + (areaFin - areaInicio - h) / 2
+      
+      doc.addImage(branding.logoUrl, 'PNG', margen, yCentro, w, h, undefined, 'FAST')
     } catch (e) {
       console.warn('Error al cargar logo en PDF:', e)
     }
