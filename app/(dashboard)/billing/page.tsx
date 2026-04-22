@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card'
 import Heading from '@/components/ui/Heading'
 import { useToast } from '@/lib/toast/index'
 import { getBillingPageData } from '@/lib/services/billing-actions.server'
+import { cancelSubscriptionAction } from '@/lib/services/billing-actions'
 
 interface Plan {
   id: string
@@ -56,7 +57,7 @@ export default function BillingPage() {
   const searchParams = useSearchParams()
   
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<User | null>(null) // Typed as User | null
+  const [user, setUser] = useState<User | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [upgradePlans, setUpgradePlans] = useState<Plan[]>([])
@@ -64,6 +65,7 @@ export default function BillingPage() {
   const [generationUsage, setGenerationUsage] = useState<GenerationUsage | null>(null)
   const [error, setError] = useState('')
   const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null)
+  const [canceling, setCanceling] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -73,26 +75,19 @@ export default function BillingPage() {
         
         const result = await getBillingPageData()
         
-        // Type guard to check if the result is an error object.
-        // We check if 'error' property exists and is truthy.
-        // This condition will only be true if result conforms to BillingPageErrorResult.
         if ('error' in result && result.error) {
             setError(result.error);
             toast.error('Error al cargar datos de membresía');
-            setLoading(false); // Ensure loading is false in error case too
+            setLoading(false);
             return;
         }
 
-        // If we reach here, TypeScript knows 'result' must be BillingPageSuccessResult.
-        // The original 'if (!result.user)' check is still relevant for cases where user might be null
-        // even if no error was explicitly thrown by getBillingPageData (e.g., user logged out mid-fetch).
         if (!result.user) {
             setUser(null);
             setLoading(false);
             return;
         }
         
-        // Now, 'result' is definitely BillingPageSuccessResult and 'result.user' is not null
         setUser(result.user);
         setSubscription(result.subscription);
         setGenerationUsage(result.generationUsage);
@@ -104,7 +99,6 @@ export default function BillingPage() {
         
         setPlans(plansWithCurrency)
 
-        // Check for active or trialing subscriptions for display purposes
         if (result.subscription && (result.subscription.status === 'active' || result.subscription.status === 'trialing')) {
           const current = plansWithCurrency.find(p => p.id.trim() === (result.subscription?.plan || '').trim())
           setCurrentPlan(current || null)
@@ -115,7 +109,7 @@ export default function BillingPage() {
           setUpgradePlans(upgrades)
         }
       } catch (err) {
-        console.error('Error loading billing data:', err) // Keep original catch block logging
+        console.error('Error loading billing data:', err)
         setError('No se pudo cargar los datos de membresía. Intenta nuevamente.')
         toast.error('Error al cargar datos de membresía')
       } finally {
@@ -126,7 +120,33 @@ export default function BillingPage() {
     loadData()
   }, [toast, searchParams])
 
-    async function handleUpgrade(planId: string) {
+  async function handleCancelSubscription() {
+    if (!window.confirm('¿Estás seguro de que deseas cancelar tu membresía? Seguirás teniendo acceso hasta el final del periodo facturado.')) {
+      return
+    }
+
+    setCanceling(true)
+    try {
+      const result = await cancelSubscriptionAction()
+      if (result.success) {
+        toast.success('Tu membresía ha sido cancelada y no se renovará.')
+        // Refresh data
+        const freshData = await getBillingPageData()
+        if (!('error' in freshData)) {
+          setSubscription(freshData.subscription)
+        }
+      } else {
+        toast.error(result.error || 'No se pudo cancelar la membresía')
+      }
+    } catch (err) {
+      console.error('Error in handleCancelSubscription:', err)
+      toast.error('Ocurrió un error inesperado.')
+    } finally {
+      setCanceling(false)
+    }
+  }
+
+  async function handleUpgrade(planId: string) {
     setUpdatingPlanId(planId)
     try {
       const response = await fetch('/api/billing/checkout', {
@@ -163,14 +183,11 @@ export default function BillingPage() {
     setLoading(true)
     setError('')
     const result = await getBillingPageData()
-    // The result here needs to be typed correctly to handle potential 'error' property
-    // We can use a type guard similar to the useEffect block for safety.
     if ('error' in result && result.error) {
       setError(result.error);
       setLoading(false);
       return;
     }
-    // If it's not an error, it should be the success type (or at least have user property)
     if (!result.user) {
       setUser(null);
       setLoading(false);
@@ -183,20 +200,14 @@ export default function BillingPage() {
     setLoading(false);
   }
 
-  // Loading
   if (loading) {
     return (
-      <div style={{
-        padding: '40px',
-        textAlign: 'center',
-        color: 'var(--text-secondary)'
-      }}>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
         <p>Cargando datos de membresía...</p>
       </div>
     )
   }
 
-  // Not logged in
   if (!user) {
     return (
       <div style={{ 
@@ -215,7 +226,6 @@ export default function BillingPage() {
     )
   }
 
-  // Error display (after checking for result.error and result.user)
   if (error) {
     return (
       <div style={{
@@ -250,8 +260,6 @@ export default function BillingPage() {
     )
   }
 
-  // Active subscription with upgrade options
-  // The condition to check for active/trialing subscription is already in place from previous changes.
   if (subscription && (subscription.status === 'active' || subscription.status === 'trialing')) {
     const usedPercentage = generationUsage?.used && generationUsage?.limit 
       ? Math.round((generationUsage.used / generationUsage.limit) * 100)
@@ -259,16 +267,24 @@ export default function BillingPage() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '560px' }}>
-        <div>
-          <Heading level={1} style={{ marginBottom: '4px' }}>
-            Tu Membresía
-          </Heading>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Plan activo: {currentPlan?.name || 'Membresía Activa'}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <Heading level={1} style={{ marginBottom: '4px' }}>
+              Tu Membresía
+            </Heading>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Plan activo: {currentPlan?.name || 'Membresía Activa'}
+            </p>
+          </div>
+          <Button 
+            variant="secondary" 
+            onClick={handleCancelSubscription}
+            disabled={canceling}
+          >
+            {canceling ? 'Cancelando...' : 'Cancelar membresía'}
+          </Button>
         </div>
 
-        {/* Generation Usage */}
         {generationUsage && (
           <Card variant="outline" padding="md">
             <div style={{
@@ -285,7 +301,6 @@ export default function BillingPage() {
               </span>
             </div>
             
-            {/* Progress bar */}
             <div style={{
               width: '100%',
               height: '8px',
@@ -364,7 +379,6 @@ export default function BillingPage() {
     )
   }
 
-  // No subscription - show plans
   const productsForUI = plans.map(p => {
     const docCount = p.features
       ?.find((f: string) => f.toLowerCase().includes('generaciones') || f.toLowerCase().includes('documentos'))

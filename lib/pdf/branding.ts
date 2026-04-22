@@ -33,21 +33,24 @@ export function aplicarEncabezado(
   const margen = 20
   const anchoDoc = 215.9
 
-  // Logo a la izquierda
+  // Logo a la izquierda - Aumentado y centrado verticalmente
   if (branding.logoUrl) {
     try {
       const imgProps = doc.getImageProperties(branding.logoUrl)
-      const maxWidth = 40
-      const maxHeight = 15
+      const maxWidth = 55 // Aumentado de 40 a 55
+      const maxHeight = 22 // Aumentado de 15 a 22
       const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height)
       const width = imgProps.width * ratio
       const height = imgProps.height * ratio
       
-      // Centrar el logo en la caja de 40x15
-      const x = margen + (maxWidth - width) / 2
-      const y = 10 + (maxHeight - height) / 2
+      // Posición X fija al margen
+      const x = margen
       
-      doc.addImage(branding.logoUrl, 'PNG', x, y, width, height, undefined, 'FAST')
+      // Centrar verticalmente en el espacio superior (aprox 35mm antes de las líneas)
+      // El espacio disponible es desde y=5 hasta y=33 (donde empiezan las líneas)
+      const yCentro = 5 + (28 - height) / 2
+      
+      doc.addImage(branding.logoUrl, 'PNG', x, yCentro, width, height, undefined, 'FAST')
     } catch (e) {
       console.warn('Error al cargar logo en PDF:', e)
     }

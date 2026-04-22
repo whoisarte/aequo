@@ -5,14 +5,18 @@ import { getCachedBranding, getCachedUserId } from '@/lib/auth/cache'
 import { useBrandingStore } from '@/store/brandingStore'
 import { guardarPerfilSupabase, obtenerPerfilSupabase } from '@/lib/supabase/perfil'
 import { useToast } from '@/lib/toast/index'
+import { deleteUserAccountAction } from '@/lib/services/user-actions.server'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { useRouter } from 'next/navigation'
 
 export default function EstiloPage() {
   const { branding, setBranding } = useBrandingStore()
   const toast = useToast()
+  const router = useRouter()
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
   const [errorCarga, setErrorCarga] = useState('')
   const isMounted = useRef(false)
   const isLoadingProfile = useRef(false)
@@ -131,6 +135,34 @@ export default function EstiloPage() {
     }
   }
 
+  async function handleEliminarCuenta() {
+    if (!window.confirm('¿ESTÁS ABSOLUTAMENTE SEGURO? Esta acción eliminará permanentemente tu cuenta, todos tus expedientes guardados y cancelará cualquier suscripción activa. Esta acción no se puede deshacer.')) {
+      return
+    }
+
+    const confirmacion = window.prompt('Para confirmar, escribe "ELIMINAR" en el siguiente campo:')
+    if (confirmacion !== 'ELIMINAR') {
+      toast.error('Confirmación incorrecta. La cuenta no fue eliminada.')
+      return
+    }
+
+    setEliminando(true)
+    try {
+      const result = await deleteUserAccountAction()
+      if (result.success) {
+        toast.success('Tu cuenta ha sido eliminada. Lamentamos verte partir.')
+        router.push('/login')
+      } else {
+        toast.error(result.error || 'No se pudo eliminar la cuenta.')
+      }
+    } catch (error) {
+      console.error('Error in handleEliminarCuenta:', error)
+      toast.error('Ocurrió un error inesperado al intentar eliminar la cuenta.')
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   if (cargando) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -245,6 +277,21 @@ export default function EstiloPage() {
       <Button onClick={handleGuardar} disabled={guardando} fullWidth>
         {guardando ? 'Guardando...' : 'Guardar configuración'}
       </Button>
+
+      <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid #fee2e2' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#b91c1c', marginBottom: '8px' }}>Zona de peligro</h2>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate.
+        </p>
+        <Button 
+          variant="secondary" 
+          onClick={handleEliminarCuenta} 
+          disabled={eliminando}
+          style={{ borderColor: '#fecaca', color: '#b91c1c' }}
+        >
+          {eliminando ? 'Eliminando cuenta...' : 'Eliminar mi cuenta permanentemente'}
+        </Button>
+      </div>
     </div>
   )
 }

@@ -7,6 +7,7 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary'
   disabled?: boolean
   fullWidth?: boolean
+  style?: React.CSSProperties
 }
 
 export default function Button({
@@ -16,6 +17,7 @@ export default function Button({
   variant = 'primary',
   disabled = false,
   fullWidth = false,
+  style = {},
 }: ButtonProps) {
   const base: React.CSSProperties = {
     padding: '8px 16px',
@@ -49,7 +51,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      style={styles[variant]}
+      style={{ ...styles[variant], ...style }}
     >
       {children}
     </button>

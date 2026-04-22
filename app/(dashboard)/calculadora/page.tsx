@@ -92,18 +92,46 @@ export default function CalculadoraPage() {
     useBrandingStore.getState().setAccessState(newAccess)
   }
 
+  const billedResultRef = useRef<string | null>(null)
+
+  async function registerGenerationIfNew() {
+    if (!resultado) return false
+    
+    // Create a unique key for the current result to check if it's already billed
+    // Using a stringified version of the result values for exact comparison
+    const currentResultKey = JSON.stringify({
+      total: resultado.finiquito.total + resultado.liquidacion.total,
+      empleado: datos.nombreEmpleado,
+      salida: datos.fechaSalida
+    })
+
+    if (billedResultRef.current === currentResultKey) {
+      return true // Already billed
+    }
+
+    // Bill the user
+    await guardar(datos, resultado)
+    await refreshAccess()
+    billedResultRef.current = currentResultKey
+    return true
+  }
+
   async function handleDescargar() {
     if (!resultado) return
     if (!(await validateAccess())) return
+    
+    // Register the generation if it's the first time for this result
+    await registerGenerationIfNew()
+    
     await descargarPDF({ resultado, datos, branding }, `aequo-${datos.nombreEmpleado || 'calculo'}`)
-    await refreshAccess()
   }
 
   async function handleGuardar() {
     if (!resultado) return
     if (!(await validateAccess())) return
-    await guardar(datos, resultado)
-    await refreshAccess()
+    
+    // Register the generation if it's the first time for this result
+    await registerGenerationIfNew()
   }
 
   async function handlePaymentClick() {

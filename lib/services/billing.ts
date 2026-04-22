@@ -76,4 +76,33 @@ export const BillingService = {
       throw e;
     }
   },
+
+  async cancelSubscription(userId: string) {
+    // 1. Find subscription in DB
+    const { data: subscription, error } = await supabaseAdmin
+      .from('subscriptions')
+      .select('stripe_sub_id')
+      .eq('user_id', userId)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching subscription from DB:', error);
+      throw new Error('Error al consultar la suscripción en la base de datos.');
+    }
+
+    if (!subscription?.stripe_sub_id) {
+      return null; // No active subscription to cancel
+    }
+
+    // 2. Cancel at period end in Stripe
+    try {
+      return await stripe.subscriptions.update(subscription.stripe_sub_id, {
+        cancel_at_period_end: true,
+      });
+    } catch (e) {
+      console.error('Error cancelling subscription in Stripe:', e);
+      throw new Error('Error al cancelar la suscripción en Stripe.');
+    }
+  },
 };
