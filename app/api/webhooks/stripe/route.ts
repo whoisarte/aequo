@@ -165,6 +165,44 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+  } else if (event.type === 'customer.subscription.deleted') {
+    const subscription = event.data.object as Stripe.Subscription
+    const stripeSubId = subscription.id
+
+    console.log(`Webhook customer.subscription.deleted received for ${stripeSubId}`)
+
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({ status: 'canceled' })
+      .eq('stripe_sub_id', stripeSubId)
+
+    if (error) {
+      console.error('Error updating subscription to canceled in Supabase:', error)
+      return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+    }
+    console.log(`Subscription ${stripeSubId} marked as canceled.`)
+
+  } else if (event.type === 'customer.subscription.updated') {
+    const subscription = event.data.object as Stripe.Subscription
+    const stripeSubId = subscription.id
+    const status = subscription.status
+
+    console.log(`Webhook customer.subscription.updated received for ${stripeSubId} with status ${status}`)
+
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({ 
+        status: status,
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+      })
+      .eq('stripe_sub_id', stripeSubId)
+
+    if (error) {
+      console.error('Error updating subscription status in Supabase:', error)
+      return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+    }
+    console.log(`Subscription ${stripeSubId} updated to status ${status}.`)
+
   } else {
     console.log(`Unhandled webhook event type: ${event.type}`)
   }
