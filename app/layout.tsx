@@ -25,6 +25,35 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              const THEME_STORAGE_KEY = 'aequo_theme';
+              function getInitialTheme() {
+                const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+                if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
+                  return storedTheme;
+                }
+                return 'system';
+              }
+              const theme = getInitialTheme();
+              const root = document.documentElement;
+              if (theme === 'dark') {
+                root.classList.add('dark');
+              } else if (theme === 'light') {
+                root.classList.remove('dark');
+              } else { // 'system'
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                  root.classList.add('dark');
+                } else {
+                  root.classList.remove('dark');
+                }
+              }
+            })();
+          `,
+        }}
+      />
       <body className={inter.className}>
         <ThemeProvider>
           {children}

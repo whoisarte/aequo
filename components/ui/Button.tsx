@@ -35,7 +35,7 @@ export default function Button({
     primary: {
       ...base,
       background: 'var(--accent)',
-      color: '#ffffff',
+      color: 'var(--button-primary-text)', // Use the new variable for text color
       borderColor: 'var(--accent)',
     },
     secondary: {

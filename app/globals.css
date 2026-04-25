@@ -13,6 +13,7 @@
   --text-hint: #a3a3a3;
   --accent: #0a0a0a;
   --accent-hover: #262626;
+  --button-primary-text: #ffffff; /* Text color for primary button */
   --radius: 8px;
   --sidebar-width: 260px;
   --header-height: 60px;
@@ -42,6 +43,7 @@
   --text-hint: #525252;
   --accent: #ffffff;
   --accent-hover: #e5e5e5;
+  --button-primary-text: #0a0a0a; /* Text color for primary button in dark mode */
   --focus-ring: 2px solid #ffffff;
   
   /* Adaptive color tokens */

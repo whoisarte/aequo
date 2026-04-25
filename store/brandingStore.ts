@@ -4,6 +4,8 @@ import type { Branding } from '@/lib/pdf/branding'
 
 export type Theme = 'light' | 'dark' | 'system'
 
+const THEME_STORAGE_KEY = 'aequo_theme'
+
 interface AccessState {
   canGenerate: boolean
   reason?: string | null
@@ -42,6 +44,17 @@ const brandingInicial: Branding = {
 
 const ACCESS_CACHE_TTL_MS = 30 * 1000 // 30 seconds
 
+// Function to get theme from localStorage or system preference
+const getInitialTheme = (): Theme => {
+  if (typeof window !== 'undefined') {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+    if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
+      return storedTheme
+    }
+  }
+  return 'system'
+}
+
 export const useBrandingStore = create<BrandingStore>((set, get) => ({
   branding: brandingInicial,
   setBranding: (partial) =>
@@ -75,6 +88,11 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
   },
 
   // Theme management
-  theme: 'system',
-  setTheme: (theme) => set({ theme }),
+  theme: getInitialTheme(), // Initialize theme from localStorage
+  setTheme: (theme) => {
+    set({ theme })
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(THEME_STORAGE_KEY, theme) // Persist theme to localStorage
+    }
+  },
 }))
