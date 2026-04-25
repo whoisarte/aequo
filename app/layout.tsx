@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { validateEnv } from '@/lib/env'
 import ToastContainer from '@/components/ui/toast/ToastContainer'
+import ThemeProvider from '@/components/layout/ThemeProvider'
 import './globals.css'
 
 // Validate environment variables at startup
@@ -25,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
         <ToastContainer />
       </body>
     </html>

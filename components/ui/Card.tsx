@@ -16,11 +16,11 @@ const paddingSizes = {
 const variantStyles = {
   outline: {
     border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--bg-card)',
   },
   subtle: {
     border: 'none',
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'var(--bg-surface)',
   },
 }
 

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { getCachedUserId, setCachedBranding } from '@/lib/auth/cache'
 import type { Branding } from '@/lib/pdf/branding'
 
+export type Theme = 'light' | 'dark' | 'system'
+
 interface AccessState {
   canGenerate: boolean
   reason?: string | null
@@ -22,6 +24,9 @@ interface BrandingStore {
   accessState: AccessState
   setAccessState: (state: AccessState) => void
   getAccessState: () => AccessState | null
+  // Theme state
+  theme: Theme
+  setTheme: (theme: Theme) => void
 }
 
 const brandingInicial: Branding = {
@@ -68,6 +73,8 @@ export const useBrandingStore = create<BrandingStore>((set, get) => ({
     if (age > ACCESS_CACHE_TTL_MS) return null
     return state
   },
+
+  // Theme management
+  theme: 'system',
+  setTheme: (theme) => set({ theme }),
 }))
-
-

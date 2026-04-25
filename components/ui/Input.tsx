@@ -37,7 +37,7 @@ export default function Input({
           padding: '8px 12px',
           borderRadius: 'var(--radius)',
           border: '1px solid var(--border)',
-          background: 'var(--bg-primary)',
+          background: 'var(--bg-input)',
           color: 'var(--text-primary)',
           outline: 'none',
           width: '100%',

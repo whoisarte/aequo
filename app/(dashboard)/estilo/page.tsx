@@ -9,9 +9,10 @@ import { deleteUserAccountAction } from '@/lib/services/user-actions.server'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
+import type { Theme } from '@/store/brandingStore'
 
 export default function EstiloPage() {
-  const { branding, setBranding } = useBrandingStore()
+  const { branding, setBranding, theme, setTheme } = useBrandingStore()
   const toast = useToast()
   const router = useRouter()
   const [cargando, setCargando] = useState(true)
@@ -171,11 +172,17 @@ export default function EstiloPage() {
     )
   }
 
+  const themes: { value: Theme; label: string }[] = [
+    { value: 'light', label: 'Claro' },
+    { value: 'dark', label: 'Oscuro' },
+    { value: 'system', label: 'Sistema' },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '560px' }}>
       <div>
         <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Estilo del reporte</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Configura la identidad visual de tus PDFs</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Configura la identidad visual de tus PDFs y la aplicación</p>
       </div>
 
       {errorCarga && (
@@ -200,6 +207,34 @@ export default function EstiloPage() {
           </div>
         </div>
       )}
+
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          Tema
+        </h2>
+        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-surface)', padding: '4px', borderRadius: 'var(--radius)', width: 'fit-content' }}>
+          {themes.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setTheme(t.value)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                border: 'none',
+                background: theme === t.value ? 'var(--bg-card)' : 'transparent',
+                color: theme === t.value ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: theme === t.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
