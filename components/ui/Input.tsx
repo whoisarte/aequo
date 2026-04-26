@@ -6,6 +6,7 @@ type InputProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   placeholder?: string
   required?: boolean
+  fullWidth?: boolean // Add this line
 }
 
 export default function Input({
@@ -16,9 +17,10 @@ export default function Input({
   onChange,
   placeholder,
   required,
+  fullWidth, // Destructure the new prop
 }: InputProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: fullWidth ? '100%' : 'auto' }}>
       <label
         htmlFor={name}
         style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}

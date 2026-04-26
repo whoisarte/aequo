@@ -12,6 +12,7 @@ type Props = {
   onCambio: <K extends keyof DatosEmpleado>(campo: K, valor: DatosEmpleado[K]) => void
   onTogglePeriodo: (anio: number, salarioDiario: number) => void
   onActualizarPeriodo: (anio: number, campo: keyof PeriodoAnual, valor: PeriodoAnual[keyof PeriodoAnual]) => void
+  onActualizarBeneficiosExtra: (anio: number, beneficios: { nombre: string; monto: number }[]) => void
   onCalcular: () => void
   onResetear: () => void
 }
@@ -23,9 +24,9 @@ const opcionesTipo: { value: TipoDocumento; label: string }[] = [
 ]
 
 export default function FormularioEmpleado({
-  datos, errores, aniosDisponibles, onCambio, onTogglePeriodo, onActualizarPeriodo, onCalcular, onResetear,
+  datos, errores, aniosDisponibles, onCambio, onTogglePeriodo, onActualizarPeriodo, onCalcular, onResetear, onActualizarBeneficiosExtra,
 }: Props) {
-  const salarioBase = datos.periodos[0]?.salarioDiario || 0
+  const salarioBase = datos.periodos.find(p => p.anio === aniosDisponibles[0])?.salarioDiario || 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '560px' }}>
@@ -142,6 +143,80 @@ export default function FormularioEmpleado({
                           {label}
                         </label>
                       ))}
+                    </div>
+                    {/* New: Extra Benefits Checkbox and Section */}
+                    <div style={{ padding: '14px', background: 'var(--bg-surface)', borderRadius: 'var(--radius)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginBottom: '12px' }}>
+                        <input
+                          type="checkbox"
+                          checked={periodo.incluirBeneficiosExtra || false}
+                          onChange={e => {
+                            onActualizarPeriodo(anio, 'incluirBeneficiosExtra', e.target.checked);
+                            if (!e.target.checked) {
+                              onActualizarBeneficiosExtra(anio, []); // Clear benefits if unchecked
+                            }
+                          }}
+                        />
+                        Incluir Beneficios Extra
+                      </label>
+
+                      {periodo.incluirBeneficiosExtra && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {periodo.beneficiosExtra && periodo.beneficiosExtra.map((beneficio, index) => (
+                            <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                              <Input
+                                label={`Beneficio ${index + 1} Nombre`}
+                                name={`beneficioNombre-${anio}-${index}`}
+                                type="text"
+                                value={beneficio.nombre}
+                                onChange={e => {
+                                  const newBeneficios = [...(periodo.beneficiosExtra || [])];
+                                  newBeneficios[index] = { ...newBeneficios[index], nombre: e.target.value };
+                                  onActualizarBeneficiosExtra(anio, newBeneficios);
+                                }}
+                                placeholder="Ej. Bono Anual"
+                                fullWidth
+                              />
+                              <Input
+                                label={`Beneficio ${index + 1} Monto`}
+                                name={`beneficioMonto-${anio}-${index}`}
+                                type="number"
+                                value={beneficio.monto === 0 ? '' : String(beneficio.monto)}
+                                onChange={e => {
+                                  const newBeneficios = [...(periodo.beneficiosExtra || [])];
+                                  newBeneficios[index] = { ...newBeneficios[index], monto: parseFloat(e.target.value) || 0 };
+                                  onActualizarBeneficiosExtra(anio, newBeneficios);
+                                }}
+                                placeholder="0.00"
+                                fullWidth
+                              />
+                              <Button
+                                type="button"
+                                onClick={() => {
+                                  const newBeneficios = (periodo.beneficiosExtra || []).filter((_, i) => i !== index);
+                                  onActualizarBeneficiosExtra(anio, newBeneficios);
+                                }}
+                                variant="secondary"
+                                style={{ flexShrink: 0, padding: '8px 12px' }} // Smaller button for removing
+                              >
+                                X
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const newBeneficios = [...(periodo.beneficiosExtra || []), { nombre: '', monto: 0 }];
+                              onActualizarBeneficiosExtra(anio, newBeneficios);
+                            }}
+                            variant="secondary"
+                            fullWidth
+                            style={{ marginTop: '8px' }}
+                          >
+                            + Agregar Beneficio
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -8,13 +8,15 @@ export function calcularFiniquito(
   const ingreso = new Date(datos.fechaIngreso + 'T12:00:00')
   const salida = new Date(datos.fechaSalida + 'T12:00:00')
 
-  const periodos: ResultadoPeriodo[] = datos.periodos.map(periodo => {
+  const updatedPeriodos: ResultadoPeriodo[] = datos.periodos.map(periodo => {
     const desglose: DesglosePaso[] = []
     let vacaciones = 0
     let primaVacacional = 0
     let aguinaldo = 0
     let diasVacEfectivos = 0
     let aguinaldoDias = 0
+    let totalBeneficiosExtra = 0;
+    let totalBeneficiosExtraConciliable = 0;
 
     const salarioDiario = periodo.salarioDiario
 
@@ -25,7 +27,6 @@ export function calcularFiniquito(
       const fechaInicioReal = ingreso > inicioAguinaldo ? ingreso : inicioAguinaldo
       const fechaFinReal = salida
       
-      // Solo calculamos si el año de este periodo coincide con el año de salida o si es un periodo pasado completo
       const esAnioSalida = anioActual === salida.getFullYear()
       
       if (esAnioSalida) {
@@ -40,7 +41,7 @@ export function calcularFiniquito(
           concepto: `Aguinaldo proporcional ${anioActual}`,
           dias: `${diasLaboradosAnio} días laborados`,
           total: aguinaldo,
-          propuestaConciliacion: aguinaldo,
+          propuestaConciliacion: +(aguinaldo * factor).toFixed(2), // Apply factor here
         })
       }
     }
@@ -81,7 +82,7 @@ export function calcularFiniquito(
               concepto: `Vacaciones proporcionales ${periodo.anio}`,
               dias: `${diasPendientes} días`,
               total: vacaciones,
-              propuestaConciliacion: vacaciones,
+              propuestaConciliacion: +(vacaciones * factor).toFixed(2), // Apply factor here
             })
           }
 
@@ -91,19 +92,34 @@ export function calcularFiniquito(
               concepto: `Prima vacacional (25%) ${periodo.anio}`,
               dias: '25%',
               total: primaVacacional,
-              propuestaConciliacion: primaVacacional,
+              propuestaConciliacion: +(primaVacacional * factor).toFixed(2), // Apply factor here
             })
           }
         }
       }
     }
 
-    const subtotal = +(vacaciones + primaVacacional + aguinaldo).toFixed(2)
-    return { anio: periodo.anio, vacaciones, primaVacacional, aguinaldo, subtotal, desglose }
+    // --- BENEFICIOS EXTRA ---
+    if (periodo.incluirBeneficiosExtra && periodo.beneficiosExtra && periodo.beneficiosExtra.length > 0) {
+      totalBeneficiosExtra = periodo.beneficiosExtra.reduce((sum, beneficio) => sum + beneficio.monto, 0)
+      totalBeneficiosExtraConciliable = +(totalBeneficiosExtra * factor).toFixed(2)
+
+      desglose.push({
+        concepto: `Beneficios Extra Año ${periodo.anio}`,
+        dias: `${periodo.beneficiosExtra.length} beneficios`,
+        total: totalBeneficiosExtra,
+        propuestaConciliacion: totalBeneficiosExtraConciliable,
+      })
+    }
+
+    // The subtotal for the period is the sum of all conciliable amounts
+    const subtotal = desglose.reduce((sum, item) => sum + item.propuestaConciliacion, 0);
+
+    return { anio: periodo.anio, vacaciones, primaVacacional, aguinaldo, subtotal: +subtotal.toFixed(2), desglose }
   })
 
-  const desgloseTotal: DesglosePaso[] = periodos.flatMap(p => p.desglose)
-  const total = +periodos.reduce((a, b) => a + b.subtotal, 0).toFixed(2)
+  const desgloseTotal: DesglosePaso[] = updatedPeriodos.flatMap(p => p.desglose)
+  const total = +updatedPeriodos.reduce((a, b) => a + b.subtotal, 0).toFixed(2) // Sum of adjusted subtotals
 
-  return { periodos, total, desglose: desgloseTotal }
+  return { periodos: updatedPeriodos, total, desglose: desgloseTotal }
 }

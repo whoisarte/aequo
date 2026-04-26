@@ -5,6 +5,9 @@ export interface PeriodoAnual {
   aplicaVacaciones: boolean
   aplicaPrimaVacacional: boolean
   aplicaAguinaldo: boolean
+  // New fields for extra benefits
+  incluirBeneficiosExtra?: boolean
+  beneficiosExtra?: { nombre: string; monto: number }[]
 }
 
 export type TipoDocumento = 'despido' | 'renuncia' | 'ambos'
@@ -58,6 +61,7 @@ export interface ResultadoCalculo {
   mesesRestantes: number
   diasRestantes: number
   tipoDocumento: TipoDocumento
+  datosCalculo: DatosEmpleado // Add this field
 }
 
 export interface DatosAbogado {

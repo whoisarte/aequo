@@ -49,6 +49,8 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
         aplicaVacaciones: true,
         aplicaPrimaVacacional: true,
         aplicaAguinaldo: true,
+        incluirBeneficiosExtra: false, // Initialize new field
+        beneficiosExtra: [], // Initialize new field
       }
       setDatos(prev => ({
         ...prev,
@@ -61,6 +63,13 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     setDatos(prev => ({
       ...prev,
       periodos: prev.periodos.map(p => p.anio === anio ? { ...p, [campo]: valor } : p),
+    }))
+  }
+
+  function actualizarBeneficiosExtra(anio: number, beneficios: { nombre: string; monto: number }[]) {
+    setDatos(prev => ({
+      ...prev,
+      periodos: prev.periodos.map(p => p.anio === anio ? { ...p, beneficiosExtra: beneficios } : p),
     }))
   }
 
@@ -95,6 +104,7 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
       mesesRestantes,
       diasRestantes,
       tipoDocumento: datos.tipoDocumento,
+      datosCalculo: datos, // Add this line
     })
   }
 
@@ -112,6 +122,7 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     generarAniosDisponibles,
     togglePeriodo,
     actualizarPeriodo,
+    actualizarBeneficiosExtra, // Expose new function
     calcular,
     resetear,
   }

@@ -29,6 +29,7 @@ export default function CalculadoraPage() {
     datos, resultado, errores,
     actualizarDato, generarAniosDisponibles,
     togglePeriodo, actualizarPeriodo,
+    actualizarBeneficiosExtra, // Add this
     calcular, resetear,
   } = useCalculadora(branding.porcentajeConciliacion)
   const { guardar } = useExpedientes()
@@ -208,6 +209,7 @@ export default function CalculadoraPage() {
         onCambio={actualizarDato}
         onTogglePeriodo={togglePeriodo}
         onActualizarPeriodo={actualizarPeriodo}
+        onActualizarBeneficiosExtra={actualizarBeneficiosExtra}
         onCalcular={handleCalcular}
         onResetear={resetear}
       />

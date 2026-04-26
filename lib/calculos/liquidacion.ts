@@ -46,8 +46,8 @@ export function calcularLiquidacion(
   const desglosePeriodos: DesglosePaso[] = periodos.flatMap(p => p.desglose)
   const desglose = [...desglosePrincipal, ...desglosePeriodos]
 
-  const totalFiniquito = finiquito.total
-  const total = +(indemnizacion + antiguedad + totalFiniquito).toFixed(2)
+  // Calculate the total for liquidacion by summing up all propuestaConciliacion values
+  const total = +desglose.reduce((sum, item) => sum + item.propuestaConciliacion, 0).toFixed(2)
 
   return { 
     indemnizacion, 

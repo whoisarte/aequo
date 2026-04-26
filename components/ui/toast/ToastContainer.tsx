@@ -58,24 +58,23 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
           style={{
             fontSize: '14px',
             fontWeight: '600',
-            color: 'var(--text-primary)',
+            color: '#0a0a0a', // Always dark for contrast against light toast background
             margin: 0,
           }}
         >
           {toast.title}
         </p>
         {toast.message && (
-          <p
-            style={{
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
-              margin: '4px 0 0 0',
-            }}
-          >
-            {toast.message}
-          </p>
-        )}
-      </div>
+        <p
+          style={{
+            fontSize: '13px',
+            color: '#737373', // Always dark for contrast against light toast background
+            margin: '4px 0 0 0',
+          }}
+        >
+          {toast.message}
+        </p>
+        )}      </div>
       <button
         onClick={onClose}
         style={{
