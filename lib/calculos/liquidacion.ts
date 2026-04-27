@@ -57,11 +57,12 @@ export function calcularLiquidacion(
   // Calculate the total for liquidacion by summing up all propuestaConciliacion values
   const total = +desglose.reduce((sum, item) => sum + item.propuestaConciliacion, 0).toFixed(2)
 
-  return { 
-    indemnizacion, 
-    antiguedad, // Aquí estamos guardando la de 12 días
-    periodos, 
-    total, 
-    desglose 
+  return {
+    indemnizacion,
+    diasPrimaAntiguedad, // Store the days calculated
+    montoPrimaAntiguedad: antiguedad, // Store the monetary value
+    periodos,
+    total,
+    desglose
   }
 }

@@ -195,9 +195,9 @@ export default function EstiloPage() {
               style={{
                 padding: '8px 14px',
                 borderRadius: 'var(--radius)',
-                border: '1px solid #fecaca',
-                background: '#fff',
-                color: '#991b1b',
+                border: '1px solid var(--border)', // Use theme-aware border
+                background: 'var(--bg-card)', // Use theme-aware background
+                color: 'var(--color-error-text)', // Use theme-aware color
                 fontSize: '13px',
                 cursor: 'pointer',
               }}
@@ -336,15 +336,14 @@ export default function EstiloPage() {
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
           Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate.
         </p>
-        <Button 
-          variant="secondary" 
-          onClick={handleEliminarCuenta} 
+        <Button
+          variant="secondary"
+          onClick={handleEliminarCuenta}
           disabled={eliminando}
-          style={{ borderColor: '#fecaca', color: '#b91c1c' }}
+          style={{ borderColor: 'var(--color-error-border)', color: 'var(--color-error-text)' }} // Use theme-aware colors
         >
           {eliminando ? 'Eliminando cuenta...' : 'Eliminar mi cuenta permanentemente'}
-        </Button>
-      </div>
+        </Button>      </div>
     </div>
   )
 }

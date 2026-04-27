@@ -84,32 +84,6 @@ export function generarTabla(
     doc.text(fmt(paso.total), colTotal, y, { align: 'right' })
     doc.text(fmt(paso.propuestaConciliacion), colConciliacion, y, { align: 'right' })
     y += 9
-
-    // Check if this is the "Beneficios Extra" summary line
-    if (paso.concepto.startsWith('Beneficios Extra Año') && datosCalculo) {
-      const anioMatch = paso.concepto.match(/Año (\d{4})/)
-      if (anioMatch && anioMatch[1]) {
-        const anio = parseInt(anioMatch[1], 10)
-        const periodoConBeneficios = datosCalculo.periodos.find(p => p.anio === anio)
-
-        if (periodoConBeneficios && periodoConBeneficios.beneficiosExtra && periodoConBeneficios.beneficiosExtra.length > 0) {
-          y += 3; // Small space before listing individual benefits
-          doc.setFont('helvetica', 'italic')
-          doc.setFontSize(8)
-          doc.setTextColor(70)
-
-          periodoConBeneficios.beneficiosExtra.forEach(beneficio => {
-            doc.text(`- ${beneficio.nombre}:`, colConcepto + 5, y) // Indent
-            doc.text(fmt(beneficio.monto), colConciliacion, y, { align: 'right' })
-            y += 6
-          })
-          doc.setFont('helvetica', 'normal') // Reset font style
-          doc.setFontSize(9) // Reset font size
-          doc.setTextColor(30) // Reset color
-          y += 3; // Small space after listing individual benefits
-        }
-      }
-    }
   })
 
   doc.setLineWidth(0.3)

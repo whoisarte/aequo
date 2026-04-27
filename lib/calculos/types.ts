@@ -46,7 +46,8 @@ export interface ResultadoFiniquito {
 
 export interface ResultadoLiquidacion {
   indemnizacion: number
-  antiguedad: number
+  diasPrimaAntiguedad: number // Store the days here
+  montoPrimaAntiguedad: number // New field for monetary value
   periodos: ResultadoPeriodo[]
   total: number
   desglose: DesglosePaso[]
