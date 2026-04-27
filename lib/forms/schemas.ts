@@ -23,6 +23,7 @@ export const perfilSchema = z.object({
   nombreEmpresa: z.string().min(1, 'El nombre de la empresa es requerido'),
   colorPrimario: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color inválido'),
   porcentajeConciliacion: z.number().min(0).max(100, 'Porcentaje debe estar entre 0 y 100'),
+  zonaSalarial: z.enum(['general', 'frontera_norte']).default('general'), // Add this line
 })
 
 export type PerfilFormData = z.infer<typeof perfilSchema>

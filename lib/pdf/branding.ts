@@ -13,6 +13,7 @@ export interface Branding {
   fechaSalida?: string
   salarioDiario?: number
   periodos?: PeriodoAnual[]
+  zonaSalarial?: 'general' | 'frontera_norte' // Add this line
 }
 
 export const brandingDefault: Branding = {

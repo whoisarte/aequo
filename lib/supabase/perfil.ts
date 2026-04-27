@@ -49,6 +49,7 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<Guardar
           logo_url: branding.logoUrl,
           color_primario: branding.colorPrimario,
           porcentaje_conciliacion: branding.porcentajeConciliacion,
+          zona_salarial: branding.zonaSalarial, // Add this line
         }),
       timeoutFailure('Timeout guardando perfil')
     )
@@ -152,6 +153,7 @@ export async function obtenerPerfilSupabase(): Promise<PerfilEstado> {
         logoUrl: (data as ProfileRow).logo_url ?? '',
         colorPrimario: (data as ProfileRow).color_primario ?? '#0a0a0a',
         porcentajeConciliacion: (data as ProfileRow).porcentaje_conciliacion ?? 50,
+        zonaSalarial: ((data as ProfileRow).zona_salarial as 'general' | 'frontera_norte' | undefined) ?? 'general', // Explicit cast
       },
     }
   } catch (err) {

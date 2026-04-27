@@ -40,6 +40,7 @@ const brandingInicial: Branding = {
   logoUrl: '',
   colorPrimario: '#0a0a0a',
   porcentajeConciliacion: 50,
+  zonaSalarial: 'general', // Add this line, default to 'general'
 }
 
 const ACCESS_CACHE_TTL_MS = 30 * 1000 // 30 seconds

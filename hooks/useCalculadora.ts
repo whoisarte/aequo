@@ -3,6 +3,7 @@ import type { DatosEmpleado, ResultadoCalculo, PeriodoAnual, TipoDocumento } fro
 import { calcularFiniquito } from '@/lib/calculos/finiquito'
 import { calcularLiquidacion } from '@/lib/calculos/liquidacion'
 import { validarDatos, type ErroresValidacion } from '@/lib/calculos/validators'
+import { useBrandingStore } from '@/store/brandingStore' // Add this import
 
 const datosIniciales: DatosEmpleado = {
   nombreEmpleado: '',
@@ -15,6 +16,7 @@ const datosIniciales: DatosEmpleado = {
 }
 
 export function useCalculadora(porcentajeConciliacion: number = 50) {
+  const { branding } = useBrandingStore() // Access branding store
   const [datos, setDatos] = useState<DatosEmpleado>(datosIniciales)
   const [resultado, setResultado] = useState<ResultadoCalculo | null>(null)
   const [errores, setErrores] = useState<ErroresValidacion>({})
@@ -73,7 +75,7 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     }))
   }
 
-  function calcular() {
+  async function calcular() {
     const erroresValidacion = validarDatos(datos)
     if (Object.keys(erroresValidacion).length > 0) {
       setErrores(erroresValidacion)
@@ -92,8 +94,28 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     const diasRestantes = diasRestantesDespuesAnios % 30
     const aniosServicio = Math.floor(diasLaborados / 365)
 
+    // --- Fetch SMG for liquidacion calculation ---
+    let SMG_value = 0; // Default to 0 or handle as error
+    if (datos.fechaSalida) {
+      const yearSalida = new Date(datos.fechaSalida).getFullYear();
+      try {
+        const response = await fetch(`/api/minimum-wage?year=${yearSalida}&zone=${branding.zonaSalarial || 'general'}`); // Use stored zonaSalarial
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch minimum wage');
+        }
+        const data = await response.json();
+        SMG_value = data.smg;
+      } catch (error) {
+        console.error("Error fetching minimum wage:", error);
+        // Optionally, set an error state or toast notification
+        // For now, proceed with SMG_value = 0 (or a sensible fallback)
+      }
+    }
+    // --- End Fetch SMG ---
+
     const finiquito = calcularFiniquito(datos, porcentajeConciliacion)
-    const liquidacion = calcularLiquidacion(datos, porcentajeConciliacion)
+    const liquidacion = calcularLiquidacion(datos, porcentajeConciliacion, SMG_value) // Pass SMG_value
 
     setResultado({
       finiquito,
@@ -104,7 +126,7 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
       mesesRestantes,
       diasRestantes,
       tipoDocumento: datos.tipoDocumento,
-      datosCalculo: datos, // Add this line
+      datosCalculo: datos,
     })
   }
 

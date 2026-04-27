@@ -61,8 +61,8 @@ export default function FormularioEmpleado({
                 borderRadius: 'var(--radius)',
                 border: '1px solid',
                 borderColor: datos.tipoDocumento === op.value ? 'var(--accent)' : 'var(--border)',
-                background: datos.tipoDocumento === op.value ? 'var(--accent)' : 'transparent',
-                color: datos.tipoDocumento === op.value ? '#fff' : 'var(--text-primary)',
+                background: datos.tipoDocumento === op.value ? 'var(--accent)' : 'var(--bg-surface)', // Change from 'transparent'
+                color: datos.tipoDocumento === op.value ? 'var(--button-primary-text)' : 'var(--text-primary)', // Use theme-aware text for selected
                 fontSize: '13px',
                 cursor: 'pointer',
               }}

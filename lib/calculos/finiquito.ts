@@ -41,7 +41,7 @@ export function calcularFiniquito(
           concepto: `Aguinaldo proporcional ${anioActual}`,
           dias: `${diasLaboradosAnio} días laborados`,
           total: aguinaldo,
-          propuestaConciliacion: +(aguinaldo * factor).toFixed(2), // Apply factor here
+          propuestaConciliacion: aguinaldo, // Change: no factor
         })
       }
     }
@@ -82,7 +82,7 @@ export function calcularFiniquito(
               concepto: `Vacaciones proporcionales ${periodo.anio}`,
               dias: `${diasPendientes} días`,
               total: vacaciones,
-              propuestaConciliacion: +(vacaciones * factor).toFixed(2), // Apply factor here
+              propuestaConciliacion: vacaciones, // Change: no factor
             })
           }
 
@@ -92,7 +92,7 @@ export function calcularFiniquito(
               concepto: `Prima vacacional (25%) ${periodo.anio}`,
               dias: '25%',
               total: primaVacacional,
-              propuestaConciliacion: +(primaVacacional * factor).toFixed(2), // Apply factor here
+              propuestaConciliacion: primaVacacional, // Change: no factor
             })
           }
         }

@@ -296,6 +296,37 @@ export default function EstiloPage() {
         </div>
       </section>
 
+      {/* NEW SECTION: Zona Salarial */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          Zona Salarial para Cálculos
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label htmlFor="zonaSalarial" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>
+            Selecciona la zona geográfica del empleado para el salario mínimo.
+          </label>
+          <select
+            id="zonaSalarial"
+            name="zonaSalarial"
+            value={branding.zonaSalarial || 'general'} // Default to 'general' if not set
+            onChange={e => setBranding({ zonaSalarial: e.target.value as 'general' | 'frontera_norte' })}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-input)',
+              color: 'var(--text-primary)',
+              outline: 'none',
+              width: '100%',
+              fontSize: '14px',
+            }}
+          >
+            <option value="general">General (Resto del país)</option>
+            <option value="frontera_norte">Zona Libre de la Frontera Norte</option>
+          </select>
+        </div>
+      </section>
+
       <Button onClick={handleGuardar} disabled={guardando} fullWidth>
         {guardando ? 'Guardando...' : 'Guardar configuración'}
       </Button>

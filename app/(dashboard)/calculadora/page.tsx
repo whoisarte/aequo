@@ -192,7 +192,7 @@ export default function CalculadoraPage() {
     n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
 
   async function handleCalcular() {
-    calcular()
+    await calcular()
   }
 
   return (

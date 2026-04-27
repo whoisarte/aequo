@@ -10,6 +10,7 @@ export interface ProfileRow {
   logo_url: string | null
   color_primario: string | null
   porcentaje_conciliacion: number | null
+  zona_salarial: string | null // Add this line
   created_at: string
 }
 
