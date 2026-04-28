@@ -95,7 +95,11 @@ export function generarTabla(
   doc.setFontSize(9.5)
   doc.setTextColor(colorRGB[0], colorRGB[1], colorRGB[2]) // Use branding color
   doc.text('Total', colConcepto, y)
-  doc.text(fmt(total), colTotal, y, { align: 'right' })
+  
+  // Calculate the sum of original amounts (item.total) from the desglose
+  const grandTotalOriginal = desglose.reduce((a, b) => a + b.total, 0)
+  doc.text(fmt(grandTotalOriginal), colTotal, y, { align: 'right' }) // Display sum of original totals
+
   const totalConciliacion = desglose.reduce((a, b) => a + b.propuestaConciliacion, 0)
   doc.text(fmt(totalConciliacion), colConciliacion, y, { align: 'right' })
   y += 10

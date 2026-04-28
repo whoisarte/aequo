@@ -102,7 +102,7 @@ export function calcularFiniquito(
     // --- BENEFICIOS EXTRA ---
     if (periodo.incluirBeneficiosExtra && periodo.beneficiosExtra && periodo.beneficiosExtra.length > 0) {
       totalBeneficiosExtra = periodo.beneficiosExtra.reduce((sum, beneficio) => sum + beneficio.monto, 0)
-      totalBeneficiosExtraConciliable = +(totalBeneficiosExtra * factor).toFixed(2)
+      totalBeneficiosExtraConciliable = totalBeneficiosExtra // Change: No conciliation for extra benefits
 
       desglose.push({
         concepto: `Beneficios Extra Año ${periodo.anio}`,
