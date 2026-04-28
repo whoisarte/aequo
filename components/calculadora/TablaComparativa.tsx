@@ -55,6 +55,9 @@ function TablaDesglose({ titulo, subtitulo, desglose, total, summaryOnly }: {
   total: number
   summaryOnly: boolean
 }) {
+  const totalOriginal = desglose.reduce((a, b) => a + b.total, 0); // Calculate sum of original amounts
+  const totalConciliable = desglose.reduce((a, b) => a + b.propuestaConciliacion, 0); // Calculate sum of conciliable amounts
+
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
@@ -84,9 +87,9 @@ function TablaDesglose({ titulo, subtitulo, desglose, total, summaryOnly }: {
       <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px' }}>
         <p style={{ fontWeight: '600' }}>Total</p>
         <p style={{ minWidth: '50px' }}></p>
-        <p style={{ fontWeight: '600', textAlign: 'right', minWidth: '90px' }}>{fmt(total)}</p>
+        <p style={{ fontWeight: '600', textAlign: 'right', minWidth: '90px' }}>{fmt(totalOriginal)}</p> {/* Display original total */}
         <p style={{ fontWeight: '600', textAlign: 'right', minWidth: '90px', color: 'var(--text-secondary)' }}>
-          {fmt(desglose.reduce((a, b) => a + b.propuestaConciliacion, 0))}
+          {fmt(totalConciliable)} {/* Display conciliable total */}
         </p>
       </div>
     </div>
