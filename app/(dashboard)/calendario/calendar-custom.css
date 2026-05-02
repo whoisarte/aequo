@@ -1,0 +1,178 @@
+/* Custom styles for react-big-calendar to match project theme */
+
+.rbc-calendar {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-card); /* Use card background for calendar */
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+/* Header (toolbar) */
+.rbc-toolbar {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem;
+  background-color: var(--bg-surface);
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+
+.rbc-toolbar button {
+  color: var(--text-primary);
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.rbc-toolbar button:hover {
+  background-color: var(--bg-primary);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button.rbc-active:hover {
+  background-color: var(--accent);
+  color: var(--button-primary-text);
+  border-color: var(--accent);
+}
+
+.rbc-toolbar-label {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Day/Week/Month View Headers */
+.rbc-header {
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.rbc-header + .rbc-header {
+  border-left: 1px solid var(--border);
+}
+
+/* Cells */
+.rbc-day-bg {
+  background-color: var(--bg-card);
+}
+.rbc-off-range-bg {
+  background-color: var(--bg-surface); /* Days outside current month */
+}
+.rbc-current-time-indicator {
+  background-color: var(--accent);
+}
+
+/* Current day highlight */
+.rbc-today {
+  background-color: var(--bg-primary); /* Lighter background for today */
+}
+
+/* Selected day or range */
+.rbc-selected-cell {
+  background-color: rgba(var(--accent-rgb, 10, 10, 10), 0.1); /* Use accent color for selection */
+}
+
+/* Events */
+.rbc-event {
+  background-color: var(--accent);
+  border-radius: var(--radius);
+  color: var(--button-primary-text); /* Event text color */
+  border: none;
+  font-size: 0.8125rem;
+  padding: 2px 5px;
+}
+
+.rbc-event.rbc-selected {
+  background-color: var(--accent-hover);
+}
+
+.rbc-event-label {
+  color: var(--button-primary-text);
+}
+
+.rbc-event-content {
+  white-space: normal; /* Allow event content to wrap */
+}
+
+/* Week and Day views time column */
+.rbc-time-slot {
+  border-top: 1px dashed var(--border);
+}
+.rbc-time-view .rbc-allday-cell {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+.rbc-time-header {
+  background-color: var(--bg-surface);
+}
+.rbc-time-header-content {
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Agenda View */
+.rbc-agenda-view table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-primary);
+}
+.rbc-agenda-view th {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+.rbc-agenda-view td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+}
+.rbc-agenda-time-cell {
+  color: var(--text-secondary);
+}
+
+/* Remove default focus outline and use app focus ring */
+.rbc-btn-group > button:focus,
+.rbc-toolbar button:focus,
+.rbc-event:focus {
+  outline: none;
+  box-shadow: none; /* Remove default blue focus */
+}
+
+.rbc-toolbar button:focus-visible,
+.rbc-event:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Dark mode adjustments (if needed, ensure variables are defined in :root.dark) */
+.dark .rbc-calendar {
+  color: var(--text-primary);
+}
+.dark .rbc-toolbar button {
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.dark .rbc-toolbar button:hover {
+  background-color: var(--bg-primary);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.dark .rbc-toolbar-label {
+  color: var(--text-primary);
+}
+.dark .rbc-header {
+  color: var(--text-secondary);
+}
+.dark .rbc-event {
+  color: var(--button-primary-text);
+}
+.dark .rbc-agenda-view th {
+  color: var(--text-primary);
+}
