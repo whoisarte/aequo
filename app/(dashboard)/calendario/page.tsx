@@ -38,7 +38,7 @@ export default function CalendarioPage() {
   const [myEvents, setMyEvents] = useState(events);
 
   // You can add handlers for selecting slots, events, etc. here
-  const handleSelectSlot = ({ start, end }) => {
+  const handleSelectSlot = ({ start, end }: { start: Date, end: Date }) => {
     const title = window.prompt('Nuevo evento:')
     if (title) {
       const newEvent = {
@@ -51,13 +51,13 @@ export default function CalendarioPage() {
     }
   }
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = (event: { title: string }) => {
     window.alert(event.title)
   }
 
   return (
     <main>
-      <Heading level="h1" className="mb-4">Calendario</Heading>
+      <Heading level={1} className="mb-4">Calendario</Heading>
       <Card padding="lg" className="h-full">
         <div style={{ height: '700px' }}> {/* Set a height for the calendar */}
           <Calendar
