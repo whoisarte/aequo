@@ -40,7 +40,7 @@ export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-800 rounded-lg p-2">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <Input
         label="Título del Evento"
         name="title"
