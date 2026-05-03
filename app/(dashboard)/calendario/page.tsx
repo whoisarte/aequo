@@ -6,6 +6,8 @@ import moment from 'moment'
 import 'moment/locale/es' // Import Spanish locale for moment
 import Card from '@/components/ui/Card'
 import Heading from '@/components/ui/Heading'
+import Modal from '@/components/ui/Modal' // Import the new Modal component
+import EventForm from '@/components/calendario/EventForm' // Import the EventForm component
 
 import './calendar-custom.css'
 
@@ -18,30 +20,40 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
+  description?: string; // Add description for events
 }
 
 const events: CalendarEvent[] = []
 
 export default function CalendarioPage() {
-  const [myEvents, setMyEvents] = useState(events);
+  const [myEvents, setMyEvents] = useState<CalendarEvent[]>(events);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
 
-  // You can add handlers for selecting slots, events, etc. here
   const handleSelectSlot = ({ start, end }: { start: Date, end: Date }) => {
-    const title = window.prompt('Nuevo evento:')
-    if (title) {
-      const newEvent = {
-        id: myEvents.length,
-        title,
-        start,
-        end,
-      }
-      setMyEvents([...myEvents, newEvent])
-    }
+    setSelectedSlot({ start, end });
+    setIsModalOpen(true);
   }
 
-  const handleSelectEvent = (event: { title: string }) => {
-    window.alert(event.title)
+  const handleSelectEvent = (event: CalendarEvent) => {
+    // For now, just alert. Later, this could open an edit modal
+    window.alert(`Evento: ${event.title}\nDescripción: ${event.description || 'N/A'}\nInicio: ${moment(event.start).format('LLL')}\nFin: ${moment(event.end).format('LLL')}`);
   }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSlot({ start: null, end: null });
+  };
+
+  const handleSaveEvent = (eventData: { title: string; description: string; start: Date; end: Date }) => {
+    // In a real application, you'd send this data to your API to save to Supabase
+    console.log('New event to save:', eventData);
+    
+    // For now, just add it to local state with a mock ID
+    setMyEvents([...myEvents, { ...eventData, id: myEvents.length }]);
+    
+    handleCloseModal();
+  };
 
   return (
     <main>
@@ -75,6 +87,16 @@ export default function CalendarioPage() {
           />
         </div>
       </Card>
+
+      {/* Event Creation Modal */}
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Añadir Nuevo Evento">
+        <EventForm
+          initialStart={selectedSlot.start}
+          initialEnd={selectedSlot.end}
+          onCancel={handleCloseModal}
+          onSubmit={handleSaveEvent}
+        />
+      </Modal>
     </main>
   )
 }
