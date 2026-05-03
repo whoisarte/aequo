@@ -25,19 +25,40 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   transition: all 0.15s ease;
+  cursor: pointer;
 }
 
-.rbc-toolbar button:hover {
-  background-color: var(--bg-primary);
-  color: var(--accent);
-  border-color: var(--accent);
+.rbc-toolbar button:hover:not(.rbc-active) {
+  background-color: var(--bg-surface); /* Subtle hover for inactive buttons */
+  color: var(--text-primary);
+  border-color: var(--text-primary);
 }
 
 .rbc-toolbar button.rbc-active,
 .rbc-toolbar button.rbc-active:hover {
-  background-color: var(--accent);
-  color: var(--button-primary-text);
+  background-color: var(--accent); /* Accent background for active button */
+  color: var(--button-primary-text); /* Primary button text color */
   border-color: var(--accent);
+}
+
+/* Specific dark mode adjustments to make buttons less stark */
+.dark .rbc-toolbar button {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background-color: transparent; /* Ensure default is transparent in dark mode */
+}
+
+.dark .rbc-toolbar button:hover:not(.rbc-active) {
+  background-color: var(--bg-surface); /* Lighter background on hover for inactive buttons */
+  color: var(--text-primary);
+  border-color: var(--text-secondary); /* A bit lighter border for distinction */
+}
+
+.dark .rbc-toolbar button.rbc-active,
+.dark .rbc-toolbar button.rbc-active:hover {
+  background-color: var(--bg-primary); /* Dark background for active button */
+  color: var(--accent); /* White text */
+  border-color: var(--accent); /* White border */
 }
 
 .rbc-toolbar-label {

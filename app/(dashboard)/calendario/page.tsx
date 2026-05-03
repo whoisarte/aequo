@@ -13,26 +13,14 @@ import './calendar-custom.css'
 moment.locale('es')
 const localizer = momentLocalizer(moment)
 
-const events = [
-  {
-    id: 0,
-    title: 'Reunión con Cliente A',
-    start: new Date(2026, 4, 15, 9, 0, 0), // Year, Month (0-indexed), Day, Hour, Minute, Second
-    end: new Date(2026, 4, 15, 10, 30, 0),
-  },
-  {
-    id: 1,
-    title: 'Preparar Expediente X',
-    start: new Date(2026, 4, 16, 14, 0, 0),
-    end: new Date(2026, 4, 16, 16, 0, 0),
-  },
-  {
-    id: 2,
-    title: 'Entrega Finiquito Y',
-    start: new Date(2026, 4, 20, 11, 0, 0),
-    end: new Date(2026, 4, 20, 11, 30, 0),
-  },
-]
+interface CalendarEvent {
+  id: number;
+  title: string;
+  start: Date;
+  end: Date;
+}
+
+const events: CalendarEvent[] = []
 
 export default function CalendarioPage() {
   const [myEvents, setMyEvents] = useState(events);
