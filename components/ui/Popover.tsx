@@ -59,8 +59,14 @@ export default function Popover({ isOpen, onClose, children, title, x, y }: Popo
   return (
     <div
       ref={popoverRef}
-      className="fixed z-[9999] bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 text-left animate-in fade-in zoom-in duration-200 border border-gray-200 dark:border-gray-700"
-      style={{ left: `${x}px`, top: `${y}px`, maxWidth: '300px', minWidth: '250px' }}
+      className="fixed z-[9999] rounded-xl shadow-2xl p-4 text-left border border-gray-200 dark:border-gray-700 isolate"
+      style={{
+        left: `${x}px`,
+        top: `${y}px`,
+        maxWidth: '300px',
+        minWidth: '250px',
+        backgroundColor: 'var(--bg-card) !important', // Force background
+      }}
     >
       <button
         onClick={onClose}
