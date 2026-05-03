@@ -15,67 +15,70 @@
   background-color: var(--bg-surface);
   border-top-left-radius: var(--radius);
   border-top-right-radius: var(--radius);
-}
-
-.rbc-toolbar button {
-  color: var(--text-primary);
-  background-color: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  transition: all 0.15s ease;
-  cursor: pointer;
-}
-
-.rbc-toolbar button:hover:not(.rbc-active) {
-  background-color: var(--bg-surface); /* Subtle hover for inactive buttons */
-  color: var(--text-primary);
-  border-color: var(--text-primary);
-}
-
-.rbc-toolbar button.rbc-active,
-.rbc-toolbar button.rbc-active:hover {
-  background-color: var(--accent); /* Accent background for active button */
-  color: var(--button-primary-text); /* Primary button text color */
-  border-color: var(--accent);
-}
-
-/* Specific dark mode adjustments to make buttons less stark */
-.dark .rbc-toolbar button {
-  color: var(--text-primary);
-  border-color: var(--border);
-  background-color: transparent; /* Ensure default is transparent in dark mode */
-}
-
-.dark .rbc-toolbar button:hover:not(.rbc-active) {
-  background-color: var(--bg-surface); /* Lighter background on hover for inactive buttons */
-  color: var(--text-primary);
-  border-color: var(--text-secondary); /* A bit lighter border for distinction */
-}
-
-.dark .rbc-toolbar button.rbc-active,
-.dark .rbc-toolbar button.rbc-active:hover {
-  background-color: var(--bg-primary); /* Dark background for active button */
-  color: var(--accent); /* White text */
-  border-color: var(--accent); /* White border */
+  display: flex; /* Ensure flexbox for layout */
+  justify-content: space-between; /* Space between left and right groups */
+  align-items: center;
 }
 
 .rbc-toolbar-label {
   color: var(--text-primary);
   font-size: 1.25rem;
   font-weight: 600;
+  flex-grow: 1; /* Allow label to take available space */
+  text-align: center; /* Center the month/year label */
 }
 
-/* Day/Week/Month View Headers */
-.rbc-header {
-  background-color: var(--bg-surface);
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
-  border-left: 1px solid var(--border);
+/* Button Groups */
+.rbc-btn-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius); /* Rounded corners for the entire group */
+  overflow: hidden; /* Ensure buttons don't break the rounded corners */
 }
-.rbc-header + .rbc-header {
-  border-left: 1px solid var(--border);
+
+.rbc-btn-group button {
+  flex: 1; /* Distribute space evenly in the group */
+  color: var(--text-primary);
+  background-color: transparent;
+  border: none; /* Remove individual button borders */
+  border-right: 1px solid var(--border); /* Add separator between buttons */
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.rbc-btn-group button:last-child {
+  border-right: none; /* No separator for the last button */
+}
+
+.rbc-btn-group button:hover:not(.rbc-active) {
+  background-color: var(--bg-primary); /* Subtle hover for inactive buttons */
+  color: var(--text-primary);
+}
+
+.rbc-btn-group button.rbc-active {
+  background-color: var(--accent); /* Accent background for active button */
+  color: var(--button-primary-text); /* Primary button text color */
+}
+
+/* Dark mode adjustments for button groups */
+.dark .rbc-btn-group button {
+  color: var(--text-primary);
+}
+.dark .rbc-btn-group button:hover:not(.rbc-active) {
+  background-color: var(--bg-surface); /* Lighter dark background on hover */
+  color: var(--text-primary);
+}
+.dark .rbc-btn-group button.rbc-active {
+  background-color: var(--accent); /* Accent background */
+  color: var(--button-primary-text); /* Black text in dark mode */
+}
+.dark .rbc-btn-group {
+  border-color: var(--border);
+}
+.dark .rbc-btn-group button {
+  border-right-color: var(--border);
 }
 
 /* Cells */
