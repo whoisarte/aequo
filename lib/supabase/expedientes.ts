@@ -2,7 +2,7 @@ import { createClient } from './client'
 import type { Session } from '@supabase/supabase-js'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
-import type { ExpedienteRow } from './types'
+import type { Tables } from './types'
 import { withTimeout, createTimeoutFailure } from '@/lib/utils'
 
 const INITIAL_SESSION_WAIT_MS = 1500
@@ -11,19 +11,19 @@ function timeoutFailure(message: string) {
   return createTimeoutFailure(message)
 }
 
-function mapExpedienteRow(e: ExpedienteRow): Expediente {
+function mapExpedienteRow(e: Tables<'expedientes'>): Expediente {
   return {
     id: e.id,
-    nombreEmpleado: e.nombre_empleado,
-    puestoEmpleado: e.datos_calculo?.puestoEmpleado ?? '',
+    nombreEmpleado: e.nombre_empleado || '',
+    puestoEmpleado: (e.datos_calculo as any)?.puestoEmpleado ?? '',
     empresa: e.empresa ?? '',
-    fechaIngreso: e.datos_calculo?.fechaIngreso ?? '',
-    fechaSalida: e.datos_calculo?.fechaSalida ?? '',
-    salarioDiario: e.datos_calculo?.periodos?.[e.datos_calculo.periodos.length - 1]?.salarioDiario ?? 0,
-    tipoDocumento: e.datos_calculo?.tipoDocumento ?? 'despido',
-    resultado: e.resultado,
-    datosCalculo: e.datos_calculo!,
-    creadoEn: e.created_at,
+    fechaIngreso: (e.datos_calculo as any)?.fechaIngreso ?? '',
+    fechaSalida: (e.datos_calculo as any)?.fechaSalida ?? '',
+    salarioDiario: (e.datos_calculo as any)?.periodos?.[(e.datos_calculo as any).periodos.length - 1]?.salarioDiario ?? 0,
+    tipoDocumento: (e.datos_calculo as any)?.tipoDocumento ?? 'despido',
+    resultado: e.resultado as any,
+    datosCalculo: e.datos_calculo as any,
+    creadoEn: e.created_at || '',
     conciliacionDate: e.conciliacion_date || undefined,
     conciliacionTitle: e.conciliacion_title || undefined,
     conciliacionDescription: e.conciliacion_description || undefined,
@@ -96,8 +96,8 @@ export async function guardarExpedienteSupabase(
           user_id: session.user.id,
           nombre_empleado: datos.nombreEmpleado,
           empresa: datos.empresa,
-          datos_calculo: datos,
-          resultado: resultado,
+          datos_calculo: datos as any,
+          resultado: resultado as any,
         })
         .select('*')
         .maybeSingle();
@@ -110,7 +110,7 @@ export async function guardarExpedienteSupabase(
     }
     
     console.log('guardarExpedienteSupabase: Insert success!', data);
-    return mapExpedienteRow(data as ExpedienteRow)
+    return mapExpedienteRow(data as Tables<'expedientes'>)
   } catch (err) {
     console.error('Error guardando expediente:', err)
     return null
@@ -137,7 +137,7 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
 
     if (error || !data) return []
 
-    return data.map((e) => mapExpedienteRow(e as ExpedienteRow))
+    return data.map((e) => mapExpedienteRow(e as Tables<'expedientes'>))
   } catch (err) {
     console.error('Error obteniendo expedientes:', err)
     return []

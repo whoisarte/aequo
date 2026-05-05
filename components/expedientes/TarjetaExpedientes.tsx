@@ -5,6 +5,7 @@ import type { Expediente } from '@/hooks/useExpedientes'
 import Button from '@/components/ui/Button'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
 import Dialog from '@/components/ui/Dialog' // Import Dialog
+import ConciliacionForm from './ConciliacionForm' // Import ConciliacionForm
 
 const fmt = (n: number) =>
   n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })

@@ -5,8 +5,8 @@ import { cookies } from 'next/headers'
 
 // This client can only be used in Server Actions or Route Handlers
 // as it requires a `cookieStore` which is only available in a Server Context.
-const createSupabaseServerActionClient = () => {
-  const cookieStore = cookies()
+const createSupabaseServerActionClient = async () => {
+  const cookieStore = await cookies()
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,7 +29,7 @@ export async function updateExpedienteConciliacion(
   conciliacionTitle?: string,
   conciliacionDescription?: string
 ) {
-  const supabase = createSupabaseServerActionClient()
+  const supabase = await createSupabaseServerActionClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {

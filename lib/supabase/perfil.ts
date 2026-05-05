@@ -1,7 +1,7 @@
 import { createClient } from './client'
-import type { PostgrestError, Session } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 import type { Branding } from '@/lib/pdf/branding'
-import type { ProfileRow } from './types'
+import type { Tables } from './types'
 import { withTimeout, createTimeoutFailure } from '@/lib/utils'
 
 const INITIAL_SESSION_WAIT_MS = 1500
@@ -142,18 +142,20 @@ export async function obtenerPerfilSupabase(): Promise<PerfilEstado> {
       }
     }
 
+    const profileData = data as Tables<'profiles'>
+
     return {
       status: 'ok',
       perfil: {
-        nombreDespacho: (data as ProfileRow).despacho ?? '',
-        nombreAbogado: (data as ProfileRow).nombre ?? '',
-        cedula: (data as ProfileRow).cedula ?? '',
-        correo: (data as ProfileRow).correo ?? '',
-        direccion: (data as ProfileRow).direccion ?? '',
-        logoUrl: (data as ProfileRow).logo_url ?? '',
-        colorPrimario: (data as ProfileRow).color_primario ?? '#0a0a0a',
-        porcentajeConciliacion: (data as ProfileRow).porcentaje_conciliacion ?? 50,
-        zonaSalarial: ((data as ProfileRow).zona_salarial as 'general' | 'frontera_norte' | undefined) ?? 'general', // Explicit cast
+        nombreDespacho: profileData.despacho ?? '',
+        nombreAbogado: profileData.nombre ?? '',
+        cedula: profileData.cedula ?? '',
+        correo: profileData.correo ?? '',
+        direccion: profileData.direccion ?? '',
+        logoUrl: profileData.logo_url ?? '',
+        colorPrimario: profileData.color_primario ?? '#0a0a0a',
+        porcentajeConciliacion: profileData.porcentaje_conciliacion ?? 50,
+        zonaSalarial: (profileData.zona_salarial as 'general' | 'frontera_norte' | undefined) ?? 'general', // Explicit cast
       },
     }
   } catch (err) {
