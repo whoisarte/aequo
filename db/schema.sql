@@ -21,6 +21,9 @@ create table expedientes (
   datos_calculo   jsonb not null,   
   resultado       jsonb not null,   
   pdf_url         text,             
+  conciliacion_date timestamptz,
+  conciliacion_title text,
+  conciliacion_description text,
   created_at      timestamptz default now()
 );
 

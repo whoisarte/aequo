@@ -24,6 +24,9 @@ function mapExpedienteRow(e: ExpedienteRow): Expediente {
     resultado: e.resultado,
     datosCalculo: e.datos_calculo!,
     creadoEn: e.created_at,
+    conciliacionDate: e.conciliacion_date || undefined,
+    conciliacionTitle: e.conciliacion_title || undefined,
+    conciliacionDescription: e.conciliacion_description || undefined,
   }
 }
 

@@ -6,6 +6,8 @@ import { descargarPDF } from '@/lib/pdf/generator'
 import TarjetaExpedientes from '@/components/expedientes/TarjetaExpedientes'
 import type { Expediente } from '@/hooks/useExpedientes'
 import type { TipoDocumento } from '@/lib/calculos/types'
+import { updateExpedienteConciliacion } from '@/lib/services/expedientes-actions.server' // Import the Server Action
+import { useToast } from '@/lib/toast/index' // Import useToast
 
 function normalizarTipoDocumento(tipo: string): TipoDocumento {
   if (tipo === 'renuncia' || tipo === 'ambos') return tipo
@@ -15,15 +17,28 @@ function normalizarTipoDocumento(tipo: string): TipoDocumento {
 export default function ExpedientesPage() {
   const { expedientes, eliminar, cargando, error, recargar } = useExpedientes()
   const { branding } = useBrandingStore()
-async function handleDescargar(expediente: Expediente) {
-  if (!expediente.resultado) return
+  const toast = useToast() // Initialize useToast
 
-  await descargarPDF({
-    resultado: expediente.resultado,
-    datos: expediente.datosCalculo,
-    branding,
-  }, `aequo-${expediente.nombreEmpleado}`)
-}
+  async function handleDescargar(expediente: Expediente) {
+    if (!expediente.resultado) return
+
+    await descargarPDF({
+      resultado: expediente.resultado,
+      datos: expediente.datosCalculo,
+      branding,
+    }, `aequo-${expediente.nombreEmpleado}`)
+  }
+
+  const handleUpdateConciliacion = async (expedienteId: string, date?: string, title?: string, description?: string) => {
+    const result = await updateExpedienteConciliacion(expedienteId, date, title, description)
+
+    if (result.success) {
+      toast.success('Fecha de audiencia actualizada correctamente.')
+      await recargar() // Re-fetch expedientes to update UI
+    } else {
+      toast.error(`Error al actualizar la fecha de audiencia: ${result.error}`)
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -71,6 +86,7 @@ async function handleDescargar(expediente: Expediente) {
               expediente={e}
               onEliminar={eliminar}
               onDescargar={handleDescargar}
+              onUpdateConciliacion={handleUpdateConciliacion} // Pass the new handler
             />
           ))}
         </div>

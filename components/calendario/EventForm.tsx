@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import moment from 'moment'
+import { useToast } from '@/lib/toast' // Import useToast
 
 interface EventFormProps {
   initialStart: Date | null
@@ -17,6 +18,7 @@ export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit
   const [description, setDescription] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const toast = useToast() // Initialize useToast
 
   useEffect(() => {
     if (initialStart) {
@@ -29,6 +31,10 @@ export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) {
+      toast.error('El título del evento no puede estar vacío.');
+      return;
+    }
     if (title && start && end) {
       onSubmit({
         title,
@@ -46,7 +52,7 @@ export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit
         name="title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        required
+        // removed required
         fullWidth
       />
       <div>

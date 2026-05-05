@@ -21,6 +21,9 @@ export interface Expediente {
   resultado: ResultadoCalculo
   datosCalculo: DatosEmpleado
   creadoEn: string
+  conciliacionDate?: string // New field
+  conciliacionTitle?: string // New field
+  conciliacionDescription?: string // New field
   pendiente?: boolean
 }
 
