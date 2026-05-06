@@ -4,7 +4,7 @@ import { useState } from 'react' // Import useState
 import type { Expediente } from '@/hooks/useExpedientes'
 import Button from '@/components/ui/Button'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
-import Dialog from '@/components/ui/Dialog' // Import Dialog
+import Popover from '@/components/ui/Popover' // Import Popover instead of Dialog
 import ConciliacionForm from './ConciliacionForm' // Import ConciliacionForm
 
 const fmt = (n: number) =>
@@ -30,6 +30,16 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
   })
 
   const [isConciliacionModalOpen, setIsConciliacionModalOpen] = useState(false)
+  const [popoverX, setPopoverX] = useState(0)
+  const [popoverY, setPopoverY] = useState(0)
+
+  const handleOpenConciliacionForm = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    // Position the popover to the right of the button, aligning its top with the button's top
+    setPopoverX(rect.right + window.scrollX); 
+    setPopoverY(rect.top + window.scrollY);
+    setIsConciliacionModalOpen(true);
+  };
 
   return (
     <div style={{
@@ -79,7 +89,7 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
         <Button 
           variant="primary" 
           fullWidth={expediente.conciliacionDate ? false : true} // Make fullWidth if no date, smaller if date is shown
-          onClick={() => setIsConciliacionModalOpen(true)}
+          onClick={handleOpenConciliacionForm} // Use new handler
           style={{ marginTop: '8px' }} // Add some top margin to separate from other buttons
         >
           {expediente.conciliacionDate ? 
@@ -88,10 +98,12 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
         </Button>
       </div>
 
-      <Dialog 
+      <Popover 
         isOpen={isConciliacionModalOpen} 
         onClose={() => setIsConciliacionModalOpen(false)} 
         title={expediente.conciliacionDate ? 'Editar fecha de audiencia' : 'Agregar fecha de audiencia'}
+        x={popoverX}
+        y={popoverY}
       >
         <ConciliacionForm
           expedienteId={expediente.id}
@@ -104,7 +116,7 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
             setIsConciliacionModalOpen(false)
           }}
         />
-      </Dialog>
+      </Popover>
     </div>
   )
 }
