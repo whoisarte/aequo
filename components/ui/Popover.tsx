@@ -7,11 +7,11 @@ interface PopoverProps {
   onClose: () => void
   children: ReactNode
   title?: string
-  x: number // X coordinate for positioning
-  y: number // Y coordinate for positioning
+  x?: number // X coordinate for positioning - now optional
+  y?: number // Y coordinate for positioning - now optional
 }
 
-export default function Popover({ isOpen, onClose, children, title, x, y }: PopoverProps) {
+export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0 }: PopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
