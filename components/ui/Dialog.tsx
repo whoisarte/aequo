@@ -21,7 +21,7 @@ export default function Modal({ isOpen, onClose, children, title }: ModalProps) 
       />
 
       {/* Modal Content */}
-      <div className="relative bg-[--bg-card] rounded-xl shadow-2xl max-w-lg w-full p-6 text-left animate-in fade-in zoom-in duration-200 border border-gray-200 dark:border-gray-700">
+      <div className="relative z-[1001] bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full p-6 text-left animate-in fade-in zoom-in duration-200 border border-gray-200 dark:border-gray-700">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition"
