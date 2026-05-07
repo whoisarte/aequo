@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react' // Import useState
+import { useState } from 'react'
 import type { Expediente } from '@/hooks/useExpedientes'
 import Button from '@/components/ui/Button'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
-import Popover from '@/components/ui/Popover' // Import Popover instead of Dialog
-import ConciliacionForm from './ConciliacionForm' // Import ConciliacionForm
+import { useRouter } from 'next/navigation' // Import useRouter
 
 const fmt = (n: number) =>
   n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
@@ -21,25 +20,18 @@ type Props = {
   expediente: Expediente
   onEliminar: (id: string) => void
   onDescargar: (expediente: Expediente) => void
-  onUpdateConciliacion: (id: string, date?: string, title?: string, description?: string) => void // New prop
+  onUpdateConciliacion: (id: string, date?: string, title?: string, description?: string) => void // New prop - no longer used directly here, but kept for type compatibility for now
 }
 
 export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar, onUpdateConciliacion }: Props) {
+  const router = useRouter() // Initialize useRouter
   const fecha = new Date(expediente.creadoEn).toLocaleDateString('es-MX', {
     year: 'numeric', month: 'short', day: 'numeric'
   })
 
-  const [isConciliacionModalOpen, setIsConciliacionModalOpen] = useState(false)
-  const [popoverX, setPopoverX] = useState(0)
-  const [popoverY, setPopoverY] = useState(0)
-
-  const handleOpenConciliacionForm = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    // Position the popover to the right of the button, aligning its top with the button's top
-    setPopoverX(rect.right + window.scrollX); 
-    setPopoverY(rect.top + window.scrollY);
-    setIsConciliacionModalOpen(true);
-  };
+  const handleNavigateToConciliacionForm = () => {
+    router.push(`/expedientes/${expediente.id}/conciliacion`)
+  }
 
   return (
     <div style={{
@@ -85,38 +77,18 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
   )}>Email</Button>
           <Button variant="secondary" onClick={() => onEliminar(expediente.id)}>Eliminar</Button>
         </div>
-        {/* New button for Conciliacion Date */}
+        {/* Button for Conciliacion Date now navigates */}
         <Button 
           variant="primary" 
-          fullWidth={expediente.conciliacionDate ? false : true} // Make fullWidth if no date, smaller if date is shown
-          onClick={(e) => handleOpenConciliacionForm(e)} // Wrap handler to pass event
-          style={{ marginTop: '8px' }} // Add some top margin to separate from other buttons
+          fullWidth={expediente.conciliacionDate ? false : true}
+          onClick={handleNavigateToConciliacionForm}
+          style={{ marginTop: '8px' }}
         >
           {expediente.conciliacionDate ? 
             `Audiencia: ${formatDate(expediente.conciliacionDate)}` : 
             'Agregar audiencia de conciliación'}
         </Button>
       </div>
-
-      <Popover 
-        isOpen={isConciliacionModalOpen} 
-        onClose={() => setIsConciliacionModalOpen(false)} 
-        title={expediente.conciliacionDate ? 'Editar fecha de audiencia' : 'Agregar fecha de audiencia'}
-        x={popoverX}
-        y={popoverY}
-      >
-        <ConciliacionForm
-          expedienteId={expediente.id}
-          initialDate={expediente.conciliacionDate}
-          initialTitle={expediente.conciliacionTitle}
-          initialDescription={expediente.conciliacionDescription}
-          onCancel={() => setIsConciliacionModalOpen(false)}
-          onSubmit={(id, date, title, description) => {
-            onUpdateConciliacion(id, date, title, description)
-            setIsConciliacionModalOpen(false)
-          }}
-        />
-      </Popover>
     </div>
   )
 }

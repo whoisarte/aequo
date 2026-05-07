@@ -9,11 +9,13 @@ import { useToast } from '@/lib/toast' // Import useToast
 interface EventFormProps {
   initialStart: Date | null
   initialEnd: Date | null
+  initialTitle?: string | null // New prop
+  initialDescription?: string | null // New prop
   onCancel: () => void
   onSubmit: (eventData: { title: string; description: string; start: Date; end: Date }) => void
 }
 
-export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit }: EventFormProps) {
+export default function EventForm({ initialStart, initialEnd, initialTitle, initialDescription, onCancel, onSubmit }: EventFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [start, setStart] = useState('')
@@ -27,7 +29,13 @@ export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit
     if (initialEnd) {
       setEnd(moment(initialEnd).format('YYYY-MM-DDTHH:mm'));
     }
-  }, [initialStart, initialEnd]);
+    if (initialTitle) {
+        setTitle(initialTitle);
+    }
+    if (initialDescription) {
+        setDescription(initialDescription);
+    }
+  }, [initialStart, initialEnd, initialTitle, initialDescription]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
