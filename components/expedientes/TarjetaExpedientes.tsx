@@ -89,7 +89,7 @@ export default function TarjetaExpedientes({ expediente, onEliminar, onDescargar
         <Button 
           variant="primary" 
           fullWidth={expediente.conciliacionDate ? false : true} // Make fullWidth if no date, smaller if date is shown
-          onClick={(e) => handleOpenConciliacionForm(e)} // Wrap handler to pass event
+          onClick={handleOpenConciliacionForm} // Use new handler
           style={{ marginTop: '8px' }} // Add some top margin to separate from other buttons
         >
           {expediente.conciliacionDate ? 
