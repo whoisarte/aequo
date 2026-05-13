@@ -59,13 +59,13 @@ export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0
   return (
     <div
       ref={popoverRef}
-      className="fixed z-[9999] rounded-xl shadow-2xl p-4 text-left border border-gray-200 dark:border-gray-700 isolate bg-white dark:bg-gray-800"
+      className="fixed z-[9999] rounded-xl shadow-2xl p-4 text-left border border-gray-200 dark:border-gray-700 isolate"
       style={{
         left: `${x}px`,
         top: `${y}px`,
         maxWidth: '300px',
         minWidth: '250px',
-        // backgroundColor: 'var(--bg-card) !important', // Force background - REMOVED
+        backgroundColor: 'var(--bg-card) !important', // Force background
       }}
     >
       <button
