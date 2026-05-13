@@ -66,8 +66,6 @@ export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0
         maxWidth: '300px',
         minWidth: '250px',
         backgroundColor: 'black !important', // Force black background to debug
-        border: '5px solid red !important', // Debug border
-        boxShadow: '0 0 20px red !important', // Debug shadow
       }}
     >
       <button
