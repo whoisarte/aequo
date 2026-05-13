@@ -65,7 +65,7 @@ export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0
         top: `${y}px`,
         maxWidth: '300px',
         minWidth: '250px',
-        backgroundColor: 'black !important', // Force black background to debug
+        // backgroundColor: 'var(--bg-card) !important', // Force background - REMOVED
       }}
     >
       <button
