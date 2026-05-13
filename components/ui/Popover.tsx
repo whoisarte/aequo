@@ -1,7 +1,6 @@
 'use client'
 
-import React, { ReactNode, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React, { ReactNode, useEffect, useRef } from 'react'
 
 interface PopoverProps {
   isOpen: boolean
@@ -14,15 +13,9 @@ interface PopoverProps {
 
 export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0 }: PopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, [])
-
-  useEffect(() => {
-    if (!isOpen || !mounted) return
+    if (!isOpen) return
 
     // Position adjustment to keep popover within viewport
     const adjustPosition = () => {
@@ -34,55 +27,47 @@ export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0
         let newX = x
         let newY = y
 
-        // If x or y are 0 (likely default for centered modal), try to center it
-        if (x === 0 && y === 0) {
-            newX = (viewportWidth - popoverRect.width) / 2
-            newY = (viewportHeight - popoverRect.height) / 2
-        } else {
-            // Adjust if it overflows right
-            if (newX + popoverRect.width > viewportWidth - 20) { // 20px margin
-            newX = viewportWidth - popoverRect.width - 20
-            }
-            // Adjust if it overflows bottom
-            if (newY + popoverRect.height > viewportHeight - 20) { // 20px margin
-            newY = viewportHeight - popoverRect.height - 20
-            }
-            // Adjust if it overflows left
-            if (newX < 20) {
-            newX = 20;
-            }
-            // Adjust if it overflows top
-            if (newY < 20) {
-                newY = 20;
-            }
+        // Adjust if it overflows right
+        if (newX + popoverRect.width > viewportWidth - 20) { // 20px margin
+          newX = viewportWidth - popoverRect.width - 20
         }
+        // Adjust if it overflows bottom
+        if (newY + popoverRect.height > viewportHeight - 20) { // 20px margin
+          newY = viewportHeight - popoverRect.height - 20
+        }
+        // Adjust if it overflows left
+        if (newX < 20) {
+          newX = 20;
+        }
+        // Adjust if it overflows top
+        if (newY < 20) {
+            newY = 20;
+        }
+
         popoverRef.current.style.left = `${newX}px`
         popoverRef.current.style.top = `${newY}px`
       }
     }
 
-    // Give it a moment to render before positioning
-    const timeoutId = setTimeout(adjustPosition, 0); 
-    
+    adjustPosition()
     window.addEventListener('resize', adjustPosition)
-    return () => {
-        clearTimeout(timeoutId)
-        window.removeEventListener('resize', adjustPosition)
-    }
-  }, [isOpen, mounted, x, y]) // Recalculate if x, y change
+    return () => window.removeEventListener('resize', adjustPosition)
+  }, [isOpen, x, y])
 
-  if (!mounted || !isOpen) return null
+  if (!isOpen) return null
 
-  const popoverContent = (
+  return (
     <div
       ref={popoverRef}
-      // Reverted to standard Tailwind classes. Removed all aggressive inline debugging styles.
-      className="fixed z-[9999] rounded-xl shadow-2xl p-4 text-left border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+      className="fixed z-[9999] rounded-xl shadow-2xl p-4 text-left border border-gray-200 dark:border-gray-700 bg-gray-900"
       style={{
         left: `${x}px`,
         top: `${y}px`,
         maxWidth: '300px',
         minWidth: '250px',
+        backgroundColor: 'black !important', // Force black background to debug
+        border: '5px solid red !important', // Debug border
+        boxShadow: '0 0 20px red !important', // Debug shadow
       }}
     >
       <button
@@ -102,6 +87,4 @@ export default function Popover({ isOpen, onClose, children, title, x = 0, y = 0
       {children}
     </div>
   )
-
-  return createPortal(popoverContent, document.body)
 }
