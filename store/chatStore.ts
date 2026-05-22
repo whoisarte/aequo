@@ -30,7 +30,7 @@ export const useChatStore = create<ChatState>((set) => ({
   conversationHistory: [],
   isLoading: false,
   error: null,
-  model: 'gemini-1.5-flash', // Default to the user's chosen model
+  model: 'gemini-pro', // Default to gemini-pro
 
   toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
   addMessage: (message) =>

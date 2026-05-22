@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const { userMessage, conversationHistory }: { userMessage: string; conversationHistory: ChatMessage[] } = await request.json();
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', // Use the user's chosen model
+      model: 'gemini-pro', // Changed to gemini-pro
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
