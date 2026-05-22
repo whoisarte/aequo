@@ -4,6 +4,7 @@
 import React from 'react';
 import { useChatStore } from '@/store/chatStore';
 import Button from '@/components/ui/Button';
+import styles from './chatbot.module.css'; // Import the CSS module
 
 // Placeholder for a chat icon (e.g., from an icon library or SVG)
 const ChatIcon = () => (
@@ -13,7 +14,7 @@ const ChatIcon = () => (
     viewBox="0 0 24 24"
     strokeWidth={1.5}
     stroke="currentColor"
-    className="w-6 h-6"
+    className="w-6 h-6" // Retain w-6 h-6 for SVG for now, might need vanilla CSS for this too
   >
     <path
       strokeLinecap="round"
@@ -26,11 +27,13 @@ const ChatIcon = () => (
 export function ChatBubble() {
   const { toggleChat } = useChatStore();
 
+  console.log('ChatBubble component rendered'); // Debug log
+
   return (
-    <div className="fixed bottom-4 right-4 z-40"> {/* z-40 as discussed */}
+    <div className={styles.chatBubbleContainer}> {/* Apply container style */}
       <Button
         onClick={toggleChat}
-        className="rounded-full w-14 h-14 flex items-center justify-center shadow-lg"
+        className={styles.chatBubbleButton} // Apply button style
         aria-label="Open Chatbot"
       >
         <ChatIcon />

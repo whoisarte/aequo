@@ -1,0 +1,143 @@
+/* components/chatbot/chatbot.module.css */
+
+.chatBubbleContainer {
+  position: fixed;
+  bottom: 1rem; /* Equivalent to Tailwind's bottom-4 */
+  right: 1rem;  /* Equivalent to Tailwind's right-4 */
+  z-index: 999; /* High z-index to be above most content, but still below modals if they use even higher */
+}
+
+.chatBubbleButton {
+  width: 56px; /* Equivalent to Tailwind's w-14 */
+  height: 56px; /* Equivalent to Tailwind's h-14 */
+  border-radius: 50%; /* Equivalent to Tailwind's rounded-full */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Equivalent to Tailwind's shadow-lg */
+  background-color: #0a0a0a; /* Dark background, adjust as needed */
+  color: #ffffff; /* White icon color */
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.chatBubbleButton:hover {
+  opacity: 0.9;
+}
+
+.chatWindowCard {
+  position: fixed;
+  bottom: 1rem; /* Equivalent to Tailwind's bottom-4 */
+  right: 1rem;  /* Equivalent to Tailwind's right-4 */
+  width: 320px; /* Equivalent to Tailwind's w-80 */
+  height: 384px; /* Equivalent to Tailwind's h-96 */
+  background-color: #ffffff;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); /* Equivalent to Tailwind's shadow-xl */
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem; /* Equivalent to Tailwind's rounded-lg or similar */
+  z-index: 1000; /* Higher than bubble to ensure it's on top when open */
+  overflow: hidden; /* Ensure content within card is clipped */
+}
+
+.chatWindowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem; /* Equivalent to Tailwind's p-4 */
+  border-bottom: 1px solid #e5e7eb; /* Equivalent to Tailwind's border-b */
+}
+
+.chatWindowTitle {
+  font-size: 1.125rem; /* Equivalent to Tailwind's text-lg */
+  font-weight: 600;    /* Equivalent to Tailwind's font-semibold */
+  margin: 0;
+}
+
+.chatWindowCloseButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280; /* Gray-500 equivalent */
+}
+
+.chatWindowCloseButton svg {
+  width: 1.25rem; /* w-5 */
+  height: 1.25rem; /* h-5 */
+  stroke: currentColor;
+}
+
+.chatMessageArea {
+  flex: 1;
+  padding: 1rem; /* Equivalent to Tailwind's p-4 */
+  overflow-y: auto;
+}
+
+.chatMessageArea p {
+  text-align: center;
+  color: #6b7280; /* Gray-500 */
+  font-style: italic;
+}
+
+.chatMessageBubble {
+  margin-bottom: 0.5rem; /* mb-2 */
+  padding: 0.5rem; /* p-2 */
+  border-radius: 0.5rem; /* rounded-lg */
+  max-width: 80%;
+}
+
+.chatMessageUser {
+  background-color: #3b82f6; /* bg-blue-500 */
+  color: #ffffff; /* text-white */
+  margin-left: auto;
+}
+
+.chatMessageModel {
+  background-color: #e5e7eb; /* bg-gray-200 */
+  color: #1f2937; /* text-gray-800 */
+  margin-right: auto;
+}
+
+.chatMessageError {
+  background-color: #fecaca; /* bg-red-200 */
+  color: #b91c1c; /* text-red-800 */
+  margin-right: auto;
+}
+
+.chatLoadingIndicator {
+  margin-bottom: 0.5rem; /* mb-2 */
+  padding: 0.5rem; /* p-2 */
+  border-radius: 0.5rem; /* rounded-lg */
+  background-color: #e5e7eb; /* bg-gray-200 */
+  color: #1f2937; /* text-gray-800 */
+  margin-right: auto;
+  max-width: 80%;
+}
+
+.chatInputForm {
+  padding: 1rem; /* p-4 */
+  border-top: 1px solid #e5e7eb; /* border-t */
+  display: flex;
+  gap: 0.5rem; /* gap-2 */
+}
+
+.chatInputField {
+  flex: 1;
+}
+
+.chatSendButton {
+  background-color: #0a0a0a; /* Same as bubble */
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+}
+
+.chatSendButton svg {
+  width: 1.25rem; /* w-5 */
+  height: 1.25rem; /* h-5 */
+  stroke: currentColor;
+}

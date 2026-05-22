@@ -4,10 +4,10 @@
 import React, { useRef, useEffect, FormEvent } from 'react';
 import { useChatStore, ChatMessage } from '@/store/chatStore';
 import { sendMessageToChatbot } from '@/lib/services/chat-service';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Card from '@/components/ui/Card'; // Assuming Card is a general container
-import Heading from '@/components/ui/Heading'; // Assuming Heading for title
+import Button from '@/components/ui/Button'; // Keeping Button for functionality
+import Input from '@/components/ui/Input';   // Keeping Input for functionality
+import Heading from '@/components/ui/Heading'; // Keeping Heading for functionality
+import styles from './chatbot.module.css'; // Import the CSS module
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -17,6 +17,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   const { conversationHistory, isLoading, error, addMessage, setLoading, setError, model } = useChatStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  console.log('ChatWindow component rendered. Is open:', useChatStore.getState().isChatOpen); // Debug log
 
   // Scroll to the latest message
   useEffect(() => {
@@ -56,38 +58,38 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   };
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 h-96 bg-white shadow-xl flex flex-col z-50"> {/* z-50 to be above ChatBubble */}
-      <div className="flex justify-between items-center p-4 border-b">
-        <Heading level={3} className="text-lg font-semibold">
+    <div className={styles.chatWindowCard}> {/* Apply main card style */}
+      <div className={styles.chatWindowHeader}> {/* Apply header style */}
+        <Heading level={3} className={styles.chatWindowTitle}> {/* Apply title style */}
           Chatbot ({model})
         </Heading>
-        <Button onClick={onClose}>
+        <Button onClick={onClose} className={styles.chatWindowCloseButton}> {/* Apply close button style */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="w-5 h-5"
+            className="w-5 h-5" // Retain w-5 h-5 for SVG for now
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
           </svg>
         </Button>
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+      <div className={`${styles.chatMessageArea} custom-scrollbar`}> {/* Apply message area style */}
         {conversationHistory.length === 0 ? (
-          <p className="text-center text-gray-500 italic">Start a conversation!</p>
+          <p>Start a conversation!</p>
         ) : (
           conversationHistory.map((msg, index) => (
             <div
               key={index}
-              className={`mb-2 p-2 rounded-lg max-w-[80%] ${
+              className={`${styles.chatMessageBubble} ${
                 msg.role === 'user'
-                  ? 'bg-blue-500 text-white ml-auto'
+                  ? styles.chatMessageUser
                   : msg.role === 'model'
-                  ? 'bg-gray-200 text-gray-800 mr-auto'
-                  : 'bg-red-200 text-red-800 mr-auto'
+                  ? styles.chatMessageModel
+                  : styles.chatMessageError
               }`}
             >
               {msg.content}
@@ -95,36 +97,36 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
           ))
         )}
         {isLoading && (
-          <div className="mb-2 p-2 rounded-lg bg-gray-200 text-gray-800 mr-auto max-w-[80%]">
-            <span className="animate-pulse">...</span>
+          <div className={styles.chatLoadingIndicator}>
+            <span className="animate-pulse">...</span> {/* Keep animate-pulse if it's a global animation */}
           </div>
         )}
         <div ref={messagesEndRef} /> {/* For auto-scrolling */}
       </div>
 
       {error && (
-        <div className="p-2 text-red-600 text-sm text-center">
+        <div className={`${styles.chatMessageBubble} ${styles.chatMessageError}`}> {/* Use vanilla CSS for error */}
           Error: {error}
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2">
+      <form onSubmit={handleSendMessage} className={styles.chatInputForm}> {/* Apply form style */}
         <Input
           name="chat-input"
           ref={inputRef}
           type="text"
           placeholder="Type your message..."
-          className="flex-1"
+          className={styles.chatInputField} // Apply input field style
           disabled={isLoading}
         />
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className={styles.chatSendButton}> {/* Apply send button style */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="w-5 h-5"
+            className="w-5 h-5" // Retain w-5 h-5 for SVG for now
           >
             <path
               strokeLinecap="round"
@@ -134,6 +136,6 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
           </svg>
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }
