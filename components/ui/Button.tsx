@@ -8,6 +8,7 @@ type ButtonProps = {
   disabled?: boolean
   fullWidth?: boolean
   style?: React.CSSProperties
+  className?: string // Add className prop
 }
 
 export default function Button({
@@ -18,6 +19,7 @@ export default function Button({
   disabled = false,
   fullWidth = false,
   style = {},
+  className, // Destructure className
 }: ButtonProps) {
   const base: React.CSSProperties = {
     padding: '8px 16px',
@@ -52,6 +54,7 @@ export default function Button({
       onClick={onClick}
       disabled={disabled}
       style={{ ...styles[variant], ...style }}
+      className={className} // Pass className to the button element
     >
       {children}
     </button>

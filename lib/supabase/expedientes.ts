@@ -3,7 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import type { DatosEmpleado, ResultadoCalculo } from '@/lib/calculos/types'
 import type { Expediente } from '@/hooks/useExpedientes'
 import type { Tables } from './types'
-import { withTimeout, createTimeoutFailure } from '@/lib/utils'
+import { withTimeout, createTimeoutFailure, createTimeoutSingleFailure } from '@/lib/utils'
+
 
 const INITIAL_SESSION_WAIT_MS = 1500
 
@@ -30,17 +31,48 @@ function mapExpedienteRow(e: Tables<'expedientes'>): Expediente {
   }
 }
 
-async function getSessionWithInitialWait(supabase: ReturnType<typeof createClient>) {
-  type SessionResult =
-    | { data: { session: Session }; error: null }
-    | { data: { session: null }; error: null }
-    | { data: { session: null }; error: unknown }
+import type { PostgrestResponse } from '@supabase/supabase-js'
 
-  let sessionResult: SessionResult = await withTimeout(supabase.auth.getSession(), {
-    data: { session: null },
-    error: null,
-  })
+type SessionResult =
+  | { data: { session: Session }; error: null }
+  | { data: { session: null }; error: null }
+  | { data: { session: null }; error: unknown }
 
+async function getSessionWithInitialWait(supabase: ReturnType<typeof createClient>): Promise<SessionResult> {
+  const initialSessionPromise = supabase.auth.getSession().then(
+    (response): SessionResult => {
+      // Map PostgrestResponse to SessionResult
+      if (response.error) {
+        return { data: { session: null }, error: response.error };
+      }
+      // Explicitly check if session exists to return the correct SessionResult union member
+      if (response.data.session) {
+        return { data: { session: response.data.session }, error: null };
+      } else {
+        return { data: { session: null }, error: null };
+      }
+    }
+  );
+
+  const timeoutPromise: Promise<SessionResult> = new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve({
+        data: { session: null },
+        error: new Error('Timeout getting session'),
+      });
+    }, INITIAL_SESSION_WAIT_MS);
+    // Ensure the timer is cleared if initialSessionPromise resolves first
+    initialSessionPromise.finally(() => clearTimeout(timer));
+  });
+
+  let sessionResult: SessionResult = await Promise.race([
+    initialSessionPromise,
+    timeoutPromise,
+  ]);
+
+  // If the initialSessionPromise resolved with no session,
+  // we still might need to wait for onAuthStateChange to fire for INITIAL_SESSION
+  // This part of the logic remains largely the same
   if (!sessionResult.data.session) {
     sessionResult = await new Promise<SessionResult>((resolve) => {
       let settled = false
@@ -48,7 +80,7 @@ async function getSessionWithInitialWait(supabase: ReturnType<typeof createClien
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (settled || event !== 'INITIAL_SESSION') return
         settled = true
-        clearTimeout(timer)
+        clearTimeout(timer) // clear potential timer from the race condition below if it hasn't fired yet
         subscription.unsubscribe()
         if (session) {
           resolve({
@@ -62,12 +94,13 @@ async function getSessionWithInitialWait(supabase: ReturnType<typeof createClien
           })
         }
       })
-
+      // This timer is for the onAuthStateChange listener itself,
+      // distinct from the one in the Promise.race above.
       const timer = setTimeout(() => {
         if (settled) return
         settled = true
         subscription.unsubscribe()
-        resolve(sessionResult)
+        resolve(sessionResult) // Resolve with current sessionResult if onAuthStateChange doesn't fire in time
       }, INITIAL_SESSION_WAIT_MS)
     })
   }
@@ -130,7 +163,7 @@ export async function obtenerExpedientesSupabase(): Promise<Expediente[]> {
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false }),
-      timeoutFailure('Timeout obteniendo expedientes')
+      timeoutFailure('Timeout obteniendo expedientes') as PostgrestResponse<Tables<'expedientes'>[]>
     )
 
     const { data, error } = response
@@ -149,7 +182,7 @@ export async function eliminarExpedienteSupabase(id: string): Promise<boolean> {
     const supabase = createClient()
     const response = await withTimeout(
       supabase.from('expedientes').delete().eq('id', id),
-      timeoutFailure('Timeout eliminando expediente')
+      createTimeoutSingleFailure<null>('Timeout eliminando expediente')
     )
     const { error } = response
     return !error

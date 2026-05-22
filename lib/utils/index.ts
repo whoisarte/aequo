@@ -1,25 +1,48 @@
-import type { PostgrestError } from '@supabase/supabase-js'
+import type { PostgrestError, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js'
 
 export const DEFAULT_TIMEOUT_MS = 8000
 
 export function createTimeoutError(message: string): PostgrestError {
-  return {
+  const error = {
     name: 'PostgrestError',
     message,
     details: '',
     hint: '',
     code: 'TIMEOUT',
-  }
+    // Add toJSON method to satisfy PostgrestError interface
+    toJSON() {
+      return {
+        name: this.name,
+        message: this.message,
+        details: this.details,
+        hint: this.hint,
+        code: this.code,
+      };
+    },
+  };
+  return error;
 }
 
-export function createTimeoutFailure(message: string) {
+export function createTimeoutFailure<T>(message: string): PostgrestResponse<T> {
   return {
-    data: null,
+    data: null, // Data is null on failure
     error: createTimeoutError(message),
     count: null,
     status: 408,
     statusText: 'Request Timeout',
-  }
+    success: false, // Literal false
+  } as PostgrestResponse<T>; // Cast to ensure all properties are there
+}
+
+export function createTimeoutSingleFailure<T>(message: string): PostgrestSingleResponse<T> {
+  return {
+    data: null, // Data is null on failure
+    error: createTimeoutError(message),
+    count: null,
+    status: 408,
+    statusText: 'Request Timeout',
+    success: false, // Literal false
+  } as PostgrestSingleResponse<T>; // Explicitly typed as PostgrestSingleResponse
 }
 
 /**
@@ -46,10 +69,11 @@ export async function withTimeout<T>(
     void promise
       .then((value) => {
         if (timer) clearTimeout(timer)
-        resolve(value)
+        resolve(value) // 'value' is already PostgrestResponse<any>
       }, () => {
         if (timer) clearTimeout(timer)
         resolve(fallback)
       })
   })
 }
+

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useBrandingStore } from '@/store/brandingStore'
+import { ChatWidget } from '@/components/chatbot/ChatWidget' // Import ChatWidget
 
 export default function ThemeProvider({
   children,
@@ -44,5 +45,10 @@ export default function ThemeProvider({
     }
   }, [theme])
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <ChatWidget /> {/* Render ChatWidget here */}
+    </>
+  )
 }

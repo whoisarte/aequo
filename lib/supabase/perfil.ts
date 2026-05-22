@@ -2,7 +2,7 @@ import { createClient } from './client'
 import type { Session } from '@supabase/supabase-js'
 import type { Branding } from '@/lib/pdf/branding'
 import type { Tables } from './types'
-import { withTimeout, createTimeoutFailure } from '@/lib/utils'
+import { withTimeout, createTimeoutFailure, createTimeoutSingleFailure } from '@/lib/utils'
 
 const INITIAL_SESSION_WAIT_MS = 1500
 
@@ -51,7 +51,7 @@ export async function guardarPerfilSupabase(branding: Branding): Promise<Guardar
           porcentaje_conciliacion: branding.porcentajeConciliacion,
           zona_salarial: branding.zonaSalarial, // Add this line
         }),
-      timeoutFailure('Timeout guardando perfil')
+      createTimeoutSingleFailure<null>('Timeout guardando perfil')
     )
 
     const { error } = response
@@ -124,7 +124,7 @@ export async function obtenerPerfilSupabase(): Promise<PerfilEstado> {
         .select('*')
         .eq('id', session.user.id)
         .maybeSingle(),
-      timeoutFailure('Timeout obteniendo perfil')
+      createTimeoutSingleFailure<Tables<'profiles'>>('Timeout obteniendo perfil')
     )
 
     const { data, error } = response
