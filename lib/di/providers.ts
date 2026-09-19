@@ -5,14 +5,13 @@ import {
   HarmCategory,
 } from '@google/generative-ai'
 import type { StripeServiceInterface, MinimumWageServiceInterface, ChatbotServiceInterface } from './types'
-import { supabaseAdmin } from '../supabase/admin'
 
 let stripeInstance: Stripe | null = null
 
 export const getStripeInstance = (): Stripe => {
   if (!stripeInstance) {
-    // @ts-expect-error Stripe types out of sync with runtime
     stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
+      // @ts-ignore Stripe types out of sync with runtime
       apiVersion: '2026-08-26.dahlia',
     })
   }
@@ -114,6 +113,11 @@ export const createRealChatbotService = (): ChatbotServiceInterface => {
 export const createRealMinimumWageService = (): MinimumWageServiceInterface => {
   return {
     getMinimumWage: async (year, zone) => {
+      const { createClient } = require('@supabase/supabase-js')
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321',
+        process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'mock_service_role_key'
+      )
       const { data, error } = await supabaseAdmin
         .from('minimum_wages')
         .select('daily_wage')

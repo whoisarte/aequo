@@ -127,7 +127,8 @@ These exist in the codebase but are not blocking:
 | 1 | Multiple `any` types | Various components | Type safety warnings |
 | 2 | React hook rule violations | Multiple pages | React 19 strict mode warnings |
 | 3 | `mock-supabase.ts` type errors | `lib/di/mock-supabase.ts:580-610` | Fixed — `gte`, `lte`, `gt`, `lt` params typed as `number \| string` |
-| 4 | Stripe API version type mismatch | `lib/di/providers.ts:16` | Stripe lib TS defs out of sync with runtime |
+| 4 | Stripe API version type mismatch | `lib/di/providers.ts:16` | Fixed — `@ts-ignore` directive applied |
+| 5 | Circular dependency causing build failure | `lib/di/providers.ts` ↔ `lib/supabase/admin.ts` | Fixed — removed top-level import, lazy-loaded supabase admin |
 
 ---
 
