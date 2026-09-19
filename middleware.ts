@@ -41,7 +41,9 @@ export async function middleware(request: NextRequest) {
     if (mockUserId) {
       user = { id: mockUserId, email: 'mock@example.com' }
     }
-  } else {
+  }
+
+  if (!user) {
     const { data } = await supabase.auth.getUser()
     user = data.user
   }

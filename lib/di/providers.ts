@@ -11,9 +11,9 @@ let stripeInstance: Stripe | null = null
 
 export const getStripeInstance = (): Stripe => {
   if (!stripeInstance) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // @ts-expect-error Stripe types out of sync with runtime
     stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
-      apiVersion: '2026-08-26.dahlia' as any,
+      apiVersion: '2026-08-26.dahlia',
     })
   }
   return stripeInstance

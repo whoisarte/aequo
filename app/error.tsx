@@ -64,15 +64,15 @@ export default function Error({ error, reset }: ErrorProps) {
         {process.env.NODE_ENV === 'development' && error.message && (
           <div
             style={{
-              background: '#f5f5f5',
-              border: '1px solid #e5e5e5',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
               borderRadius: '6px',
               padding: '12px',
               marginBottom: '24px',
               textAlign: 'left',
               fontSize: '12px',
               fontFamily: 'monospace',
-              color: '#666',
+              color: 'var(--text-secondary)',
               maxHeight: '200px',
               overflow: 'auto',
             }}
@@ -100,7 +100,7 @@ export default function Error({ error, reset }: ErrorProps) {
             onClick={() => reset()}
             style={{
               padding: '10px 20px',
-              background: 'var(--accent)',
+              background: 'var(--color-error)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 'var(--radius)',
@@ -135,7 +135,7 @@ export default function Error({ error, reset }: ErrorProps) {
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) =>
-              ((e.target as HTMLButtonElement).style.background = '#f5f5f5')
+              ((e.target as HTMLButtonElement).style.background = 'var(--bg-surface)')
             }
             onMouseLeave={(e) =>
               ((e.target as HTMLButtonElement).style.background = 'transparent')

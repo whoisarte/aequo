@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { BillingService } from '@/lib/services/billing';
 import { createClient } from '@/lib/supabase/server';
 import { rateLimit, getRateLimitKey } from '@/lib/ratelimit';
+
+const checkoutSchema = z.object({
+  planId: z.string().min(1, 'El ID del plan es requerido'),
+  mode: z.enum(['subscription', 'payment']).optional().default('subscription'),
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,16 +30,22 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get('content-type');
     if (contentType?.includes('application/json')) {
       const body = await req.json();
-      planId = body.planId as string;
-      mode = (body.mode as 'subscription' | 'payment') || 'subscription';
+      const parsed = checkoutSchema.safeParse(body)
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: parsed.error.issues[0]?.message || 'Datos inválidos' },
+          { status: 400 }
+        )
+      }
+      planId = parsed.data.planId
+      mode = parsed.data.mode
     } else {
       const formData = await req.formData();
       planId = formData.get('planId') as string;
       mode = (formData.get('mode') as 'subscription' | 'payment') || 'subscription';
-    }
-
-    if (!planId) {
-      return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
+      if (!planId) {
+        return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
+      }
     }
 
     const supabase = await createClient();

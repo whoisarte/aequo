@@ -3,13 +3,13 @@ import { createMockSupabaseClient, type MockSupabaseClient } from './mock-supaba
 
 export const getMode = (): EnvironmentMode => {
   if (process.env.NEXT_PUBLIC_APP_MODE === 'production') return 'production'
-  if (process.env.NEXT_PUBLIC_APP_MODE === 'local') return 'local'
   if (process.env.NODE_ENV === 'production') return 'production'
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'local') return 'local'
   return 'development'
 }
 
 const mode = getMode()
-const isMockMode = mode === 'local' || mode === 'development'
+const isMockMode = mode === 'local'
 
 console.log(`[DI Container] Initializing in ${mode} mode (mock: ${isMockMode})`)
 

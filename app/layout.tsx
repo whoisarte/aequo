@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import ToastContainer from '@/components/ui/toast/ToastContainer'
 import ThemeProvider from '@/components/layout/ThemeProvider'
+import CookieConsent from '@/components/CookieConsent'
 import './globals.css'
 
 const inter = Inter({
@@ -56,6 +57,7 @@ export default function RootLayout({
           {children}
         </ThemeProvider>
         <ToastContainer />
+        <CookieConsent />
       </body>
     </html>
   )

@@ -45,9 +45,9 @@ class MockSupabaseAuth {
 
       if (!this.currentUser) {
         const mockMode = process.env.NEXT_PUBLIC_APP_MODE
-        const isLocalOrDev = mockMode === 'local' || mockMode === 'development' || process.env.NODE_ENV !== 'production'
-        if (isLocalOrDev) {
-          console.log('[MOCK AUTH] Auto-login as mock-user-1 for local/development mode')
+        const isLocalMode = mockMode === 'local'
+        if (isLocalMode) {
+          console.log('[MOCK AUTH] Auto-login as mock-user-1 for local mode')
           const user: MockUser = {
             id: 'mock-user-1',
             email: 'mock@example.com',
@@ -123,9 +123,9 @@ class MockSupabaseAuth {
 
     if (!this.currentUser) {
       const mockMode = process.env.NEXT_PUBLIC_APP_MODE
-      const isLocalOrDev = mockMode === 'local' || mockMode === 'development' || process.env.NODE_ENV !== 'production'
-      if (isLocalOrDev) {
-        console.log('[MOCK AUTH] Auto-login as mock-user-1 for local/development mode')
+      const isLocalMode = mockMode === 'local'
+      if (isLocalMode) {
+        console.log('[MOCK AUTH] Auto-login as mock-user-1 for local mode')
         const user: MockUser = {
           id: 'mock-user-1',
           email: 'mock@example.com',
@@ -577,7 +577,7 @@ class MockQueryBuilder {
     return this
   }
 
-  gte(column: string, value: unknown) {
+  gte(column: string, value: number | string) {
     this.filteredData = this.filteredData.filter(item => {
       const itemVal = item[column]
       return itemVal !== null && itemVal !== undefined && itemVal >= value
@@ -585,7 +585,7 @@ class MockQueryBuilder {
     return this
   }
 
-  lte(column: string, value: unknown) {
+  lte(column: string, value: number | string) {
     this.filteredData = this.filteredData.filter(item => {
       const itemVal = item[column]
       return itemVal !== null && itemVal !== undefined && itemVal <= value
@@ -593,7 +593,7 @@ class MockQueryBuilder {
     return this
   }
 
-  gt(column: string, value: unknown) {
+  gt(column: string, value: number | string) {
     this.filteredData = this.filteredData.filter(item => {
       const itemVal = item[column]
       return itemVal !== null && itemVal !== undefined && itemVal > value
@@ -601,7 +601,7 @@ class MockQueryBuilder {
     return this
   }
 
-  lt(column: string, value: unknown) {
+  lt(column: string, value: number | string) {
     this.filteredData = this.filteredData.filter(item => {
       const itemVal = item[column]
       return itemVal !== null && itemVal !== undefined && itemVal < value

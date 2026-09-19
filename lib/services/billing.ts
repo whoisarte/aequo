@@ -5,7 +5,7 @@ import { getOrCreateStripeCustomer } from './stripe-customer'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
-  apiVersion: '2026-08-26.dahlia' as any,
+  apiVersion: '2026-04-22.dahlia' as any,
 })
 
 export const BillingService = {

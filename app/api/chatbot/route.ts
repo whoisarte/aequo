@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { container } from '@/lib/di'
 import { rateLimit, getRateLimitKey } from '@/lib/ratelimit'
+
+const chatbotSchema = z.object({
+  userMessage: z.string().min(1, 'El mensaje no puede estar vacío').max(4000, 'El mensaje es demasiado largo'),
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'model']),
+    content: z.string(),
+  })).optional().default([]),
+})
 
 export async function POST(request: Request) {
   try {
@@ -17,11 +26,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const { userMessage, conversationHistory } = await request.json()
+    const body = await request.json()
+    const parsed = chatbotSchema.safeParse(body)
 
-    if (!userMessage || typeof userMessage !== 'string') {
-      return NextResponse.json({ error: 'Mensaje inválido.' }, { status: 400 })
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Datos inválidos' },
+        { status: 400 }
+      )
     }
+
+    const { userMessage, conversationHistory } = parsed.data
 
     const result = await container.chatbot.sendMessage(userMessage, conversationHistory)
 

@@ -18,25 +18,46 @@ create table expedientes (
   user_id         uuid references auth.users(id) on delete cascade,
   nombre_empleado text not null,
   empresa         text,
-  datos_calculo   jsonb not null,   
-  resultado       jsonb not null,   
-  pdf_url         text,             
+  datos_calculo   jsonb not null,
+  resultado       jsonb not null,
+  pdf_url         text,
   conciliacion_date timestamptz,
   conciliacion_title text,
   conciliacion_description text,
   created_at      timestamptz default now()
 );
 
+CREATE INDEX idx_expedientes_user_id ON expedientes(user_id);
+
 create table subscriptions (
   id                 uuid primary key default gen_random_uuid(),
   user_id            uuid references auth.users(id) on delete cascade,
-  plan               text default 'free',  
-  status             text default 'active', 
+  plan               text default 'free',
+  status             text default 'active',
   stripe_customer_id text,
   stripe_sub_id      text,
   current_period_end timestamptz,
   created_at         timestamptz default now()
 );
+
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+
+-- RLS for profiles: users read/update only their own row
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- RLS for expedientes: users CRUD only their own
+ALTER TABLE expedientes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own expedientes" ON expedientes FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own expedientes" ON expedientes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own expedientes" ON expedientes FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own expedientes" ON expedientes FOR DELETE USING (auth.uid() = user_id);
+
+-- RLS for subscriptions: users read only their own
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
 
 -- Crear la tabla 'products'
 CREATE TABLE public.products (
@@ -47,6 +68,7 @@ CREATE TABLE public.products (
   currency text NOT NULL DEFAULT 'mxn',
   features text[] DEFAULT '{}'::text[] NOT NULL,
   is_active boolean NOT NULL DEFAULT TRUE,
+  doc_limit integer NOT NULL DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   stripe_product_id text UNIQUE NULL,
@@ -74,3 +96,55 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER products_updated_at_trigger
   BEFORE UPDATE ON public.products
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- Tabla para almacenar salarios mínimos por zona y año
+CREATE TABLE public.minimum_wages (
+  id uuid DEFAULT gen_random_uuid() NOT NULL,
+  zone text NOT NULL DEFAULT 'general',
+  year integer NOT NULL,
+  daily_wage numeric(10, 2) NOT NULL,
+  effective_date date,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT minimum_wages_pkey PRIMARY KEY (id),
+  CONSTRAINT minimum_wages_zone_year_unique UNIQUE (zone, year)
+);
+
+ALTER TABLE public.minimum_wages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Minimum wages are public" ON public.minimum_wages
+  FOR SELECT USING (true);
+
+-- Tabla para idempotencia de webhooks de Stripe
+CREATE TABLE public.webhook_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id text NOT NULL UNIQUE,
+  event_type text NOT NULL,
+  body jsonb NOT NULL,
+  processed_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role has full access" ON public.webhook_events
+  AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
+
+-- Seed data: salarios mínimos 2020-2026 (zona general y frontera norte)
+INSERT INTO public.minimum_wages (zone, year, daily_wage, effective_date) VALUES
+  -- Zona general
+  ('general', 2020, 123.22, '2020-01-01'),
+  ('general', 2021, 141.70, '2021-01-01'),
+  ('general', 2022, 172.87, '2022-01-01'),
+  ('general', 2023, 207.44, '2023-01-01'),
+  ('general', 2024, 248.93, '2024-01-01'),
+  ('general', 2025, 278.80, '2025-01-01'),
+  ('general', 2026, 300.00, '2026-01-01'),
+  -- Frontera norte
+  ('frontera_norte', 2020, 185.56, '2020-01-01'),
+  ('frontera_norte', 2021, 213.39, '2021-01-01'),
+  ('frontera_norte', 2022, 260.34, '2022-01-01'),
+  ('frontera_norte', 2023, 312.41, '2023-01-01'),
+  ('frontera_norte', 2024, 374.89, '2024-01-01'),
+  ('frontera_norte', 2025, 419.88, '2025-01-01'),
+  ('frontera_norte', 2026, 450.00, '2026-01-01');

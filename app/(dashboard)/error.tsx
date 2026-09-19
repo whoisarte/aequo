@@ -9,5 +9,12 @@ export default function DashboardError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  return <ErrorFallback error={error} reset={reset} />
+  return (
+    <ErrorFallback
+      error={error}
+      reset={reset}
+      title="Algo salió mal"
+      description="Se produjo un error inesperado en el dashboard. Intenta nuevamente o contacta a soporte."
+    />
+  )
 }
