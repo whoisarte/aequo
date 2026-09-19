@@ -1,12 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { validateEnv } from '@/lib/env'
+import Script from 'next/script'
 import ToastContainer from '@/components/ui/toast/ToastContainer'
 import ThemeProvider from '@/components/layout/ThemeProvider'
 import './globals.css'
-
-// Validate environment variables at startup
-validateEnv()
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,10 +21,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
             (function() {
               const THEME_STORAGE_KEY = 'aequo_theme';
               function getInitialTheme() {
@@ -43,7 +40,7 @@ export default function RootLayout({
                 root.classList.add('dark');
               } else if (theme === 'light') {
                 root.classList.remove('dark');
-              } else { // 'system'
+              } else {
                 if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                   root.classList.add('dark');
                 } else {
@@ -51,9 +48,9 @@ export default function RootLayout({
                 }
               }
             })();
-          `,
-        }}
-      />
+          `}
+        </Script>
+      </head>
       <body className={inter.className}>
         <ThemeProvider>
           {children}

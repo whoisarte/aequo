@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BillingService } from '@/lib/services/billing';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit, getRateLimitKey } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    const ratelimit = rateLimit(getRateLimitKey(ip, '/api/billing/checkout'), {
+      maxRequests: 10,
+      windowMs: 60000,
+    });
+
+    if (!ratelimit.success) {
+      return NextResponse.json(
+        { error: 'Too many checkout requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((ratelimit.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     let planId: string;
     let mode: 'subscription' | 'payment' = 'subscription';
 

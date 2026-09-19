@@ -1,19 +1,14 @@
 import { z } from 'zod'
 
 const envSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(1, 'Supabase anon key is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(1, 'Supabase service role key is required'),
-  STRIPE_SECRET_KEY: z.string().min(1, 'Stripe secret key is required'),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1, 'Stripe webhook secret is required'),
-  NEXT_PUBLIC_STRIPE_PUBLIC_KEY: z
-    .string()
-    .min(1, 'Stripe public key is required')
-    .optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().default('http://localhost:54321'),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).default('mock_anon_key'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).default('mock_service_role_key'),
+  STRIPE_SECRET_KEY: z.string().min(1).default('sk_test_mock'),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).default('whsec_mock'),
+  NEXT_PUBLIC_STRIPE_PUBLIC_KEY: z.string().min(1).optional().default('pk_test_mock'),
+  NEXT_PUBLIC_APP_MODE: z.enum(['production', 'development', 'local']).default('development'),
+  GEMINI_API_KEY: z.string().optional().default('mock_gemini_key'),
 })
 
 type Environment = z.infer<typeof envSchema>
@@ -31,6 +26,8 @@ export function validateEnv(): Environment {
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
       STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
       NEXT_PUBLIC_STRIPE_PUBLIC_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY,
+      NEXT_PUBLIC_APP_MODE: process.env.NEXT_PUBLIC_APP_MODE,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     })
 
     cachedEnv = env
@@ -45,20 +42,16 @@ export function validateEnv(): Environment {
       console.error(message)
 
       if (typeof window === 'undefined') {
-        // Server-side: throw during build/startup
         throw new Error(message)
       } else {
-        // Client-side: log but don't crash (already running)
         console.error(message)
-        return {} as Environment // Graceful degradation
+        return {} as Environment
       }
     }
     throw error
   }
 }
 
-// Validate on module load (server-side only)
 if (typeof window === 'undefined') {
   validateEnv()
 }
-

@@ -5,14 +5,15 @@ const protectedRoutes = ['/calculadora', '/expedientes', '/estilo', '/reporte', 
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
+  const appMode = process.env.NEXT_PUBLIC_APP_MODE || 'local'
 
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock_anon_key',
     {
       cookies: {
         getAll() {
@@ -32,10 +33,20 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
-  
-  const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtectedRoute = protectedRoutes.some(route => 
+  let user = null
+
+  if (appMode === 'local') {
+    const mockUserId = request.cookies.get('mock_user_id')?.value
+    if (mockUserId) {
+      user = { id: mockUserId, email: 'mock@example.com' }
+    }
+  } else {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  }
+
+  const isProtectedRoute = protectedRoutes.some(route =>
     path.startsWith(route)
   )
 

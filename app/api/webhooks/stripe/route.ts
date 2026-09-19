@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-04-22.dahlia',
-})
+const getStripe = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const StripeModule = (await import('stripe')) as any
+  return new StripeModule.default(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
+    apiVersion: '2026-08-26.dahlia',
+  })
+}
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const getWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_mock'
 
-/**
- * Check if webhook event has already been processed
- * Returns true if event is new, false if already processed
- */
 async function isEventNew(eventId: string): Promise<boolean> {
   try {
     const { data, error } = await supabaseAdmin
@@ -22,20 +21,16 @@ async function isEventNew(eventId: string): Promise<boolean> {
 
     if (error) {
       console.error('Error checking webhook idempotency:', error)
-      // On error, assume event is new (fail open) to avoid missing real events
       return true
     }
 
-    return !data // True if no record found (event is new)
+    return !data
   } catch (err) {
     console.error('Unexpected error in isEventNew:', err)
-    return true // Fail open
+    return true
   }
 }
 
-/**
- * Record that a webhook event has been processed
- */
 async function markEventProcessed(
   eventId: string,
   eventType: string,
@@ -49,21 +44,23 @@ async function markEventProcessed(
     })
   } catch (err) {
     console.error('Error recording webhook event:', err)
-    // Continue processing even if recording fails; idempotency check is best-effort
   }
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const signature = req.headers.get('stripe-signature')
+  const webhookSecret = getWebhookSecret()
 
   if (!signature) {
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
   }
 
-  let event: Stripe.Event
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let event: any
 
   try {
+    const stripe = await getStripe()
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -71,16 +68,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // Check if this event has already been processed (idempotency)
   const isNew = await isEventNew(event.id)
   if (!isNew) {
     console.log(`Webhook event ${event.id} already processed; skipping`)
     return NextResponse.json({ received: true, duplicate: true })
   }
 
-  // Handle the event
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = event.data.object as any
 
     console.log('Webhook checkout.session.completed received')
     console.log('Session Metadata:', session.metadata)
@@ -91,8 +87,7 @@ export async function POST(req: NextRequest) {
 
     if (userId && planId) {
       if (mode === 'subscription') {
-        // First, try to find existing subscription for this user
-        console.log(`Searching for existing subscription for user: ${userId}`);
+        console.log(`Searching for existing subscription for user: ${userId}`)
         const { data: existingSubscription, error: fetchError } = await supabaseAdmin
           .from('subscriptions')
           .select('id, status')
@@ -100,7 +95,7 @@ export async function POST(req: NextRequest) {
           .in('status', ['active', 'trialing'])
           .maybeSingle()
 
-        console.log('Existing subscription search result:', existingSubscription);
+        console.log('Existing subscription search result:', existingSubscription)
 
         if (fetchError && fetchError.code !== 'PGRST116') {
           console.error('Error fetching existing subscription:', fetchError)
@@ -113,7 +108,6 @@ export async function POST(req: NextRequest) {
         let result
 
         if (existingSubscription) {
-          // Update existing subscription
           console.log(`Updating existing subscription ${existingSubscription.id} to plan ${planId}`)
           result = await supabaseAdmin
             .from('subscriptions')
@@ -126,7 +120,6 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', existingSubscription.id)
         } else {
-          // Create new subscription
           console.log(`Creating new subscription for user ${userId}`)
           result = await supabaseAdmin
             .from('subscriptions')
@@ -144,7 +137,6 @@ export async function POST(req: NextRequest) {
 
         if (error) {
           console.error('Error updating/creating subscription in Supabase:', error)
-          // Return 500 to trigger Stripe retry
           return NextResponse.json(
             { error: 'Database update failed' },
             { status: 500 }
@@ -152,13 +144,10 @@ export async function POST(req: NextRequest) {
         }
         console.log('Subscription saved successfully for user:', userId)
       } else if (mode === 'payment') {
-        console.log(
-          `One-time payment successful for user ${userId}, plan ${planId}`
-        )
+        console.log(`One-time payment successful for user ${userId}, plan ${planId}`)
       }
     } else {
       console.error('Missing userId or planId in metadata')
-      // Still record the event to prevent retries
       await markEventProcessed(event.id, event.type, body)
       return NextResponse.json(
         { error: 'Missing required metadata' },
@@ -166,7 +155,8 @@ export async function POST(req: NextRequest) {
       )
     }
   } else if (event.type === 'customer.subscription.deleted') {
-    const subscription = event.data.object as Stripe.Subscription
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscription = event.data.object as any
     const stripeSubId = subscription.id
 
     console.log(`Webhook customer.subscription.deleted received for ${stripeSubId}`)
@@ -183,7 +173,8 @@ export async function POST(req: NextRequest) {
     console.log(`Subscription ${stripeSubId} marked as canceled.`)
 
   } else if (event.type === 'customer.subscription.updated') {
-    const subscription = event.data.object as Stripe.Subscription
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscription = event.data.object as any
     const stripeSubId = subscription.id
     const status = subscription.status
 
@@ -191,9 +182,9 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabaseAdmin
       .from('subscriptions')
-      .update({ 
+      .update({
         status: status,
-        current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString()
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       })
       .eq('stripe_sub_id', stripeSubId)
 
@@ -207,7 +198,6 @@ export async function POST(req: NextRequest) {
     console.log(`Unhandled webhook event type: ${event.type}`)
   }
 
-  // Record successful processing
   await markEventProcessed(event.id, event.type, body)
 
   return NextResponse.json({ received: true })

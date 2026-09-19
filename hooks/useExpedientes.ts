@@ -21,13 +21,40 @@ export interface Expediente {
   resultado: ResultadoCalculo
   datosCalculo: DatosEmpleado
   creadoEn: string
-  conciliacionDate?: string // New field
-  conciliacionTitle?: string // New field
-  conciliacionDescription?: string // New field
+  conciliacionDate?: string
+  conciliacionTitle?: string
+  conciliacionDescription?: string
   pendiente?: boolean
+  version?: number
+  actualizadoEn?: string
 }
 
 const LOAD_TIMEOUT_MS = 10000
+const MAX_RETRIES = 3
+const RETRY_BASE_DELAY_MS = 500
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES,
+  baseDelay: number = RETRY_BASE_DELAY_MS
+): Promise<T> {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
+    }
+  }
+
+  throw lastError
+}
 
 async function obtenerExpedientesConTimeout(): Promise<Expediente[]> {
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -59,6 +86,29 @@ async function obtenerExpedientesConTimeout(): Promise<Expediente[]> {
       clearTimeout(timer)
     }
   }
+}
+
+function mergeExpedientes(local: Expediente[], remote: Expediente[]): Expediente[] {
+  const merged = new Map<string, Expediente>()
+
+  for (const exp of remote) {
+    merged.set(exp.id, exp)
+  }
+
+  for (const exp of local) {
+    const existing = merged.get(exp.id)
+    if (!existing) {
+      merged.set(exp.id, exp)
+    } else if (exp.version && existing.version && exp.version > existing.version) {
+      merged.set(exp.id, exp)
+    } else if (!exp.pendiente && existing.pendiente) {
+      merged.set(exp.id, exp)
+    }
+  }
+
+  return Array.from(merged.values()).sort(
+    (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime()
+  )
 }
 
 export function useExpedientes() {
@@ -173,7 +223,6 @@ export function useExpedientes() {
   }, [cargar, isHydrated, leerExpedientesLocales, storageKey])
 
   async function guardar(datos: DatosEmpleado, resultado: ResultadoCalculo) {
-    console.log('useExpedientes: guardar() was called');
     const ultimoPeriodo = datos.periodos[datos.periodos.length - 1]
     const tempId = crypto.randomUUID()
     const nuevoTemporal: Expediente = {
@@ -189,39 +238,53 @@ export function useExpedientes() {
       datosCalculo: datos,
       creadoEn: new Date().toISOString(),
       pendiente: true,
+      version: 1,
+      actualizadoEn: new Date().toISOString(),
     }
 
-    const actualizados = [nuevoTemporal, ...expedientes]
-    setExpedientes(actualizados)
+    const optimisticallyUpdated = [nuevoTemporal, ...expedientes]
+    setExpedientes(optimisticallyUpdated)
     if (storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(actualizados))
+      localStorage.setItem(storageKey, JSON.stringify(optimisticallyUpdated))
     }
 
     try {
-      const remoto = await guardarExpedienteSupabase(datos, resultado)
+      const remoto = await retryWithBackoff(
+        () => guardarExpedienteSupabase(datos, resultado)
+      )
 
       if (!remoto) {
         toast.error('No se pudo guardar el expediente. Intenta nuevamente.')
+        setExpedientes(expedientes)
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(expedientes))
+        }
         return
       }
 
-      const sincronizados = [remoto, ...actualizados.filter((expediente) => expediente.id !== tempId)]
-      setExpedientes(sincronizados)
+      const synced = [remoto, ...optimisticallyUpdated.filter((e) => e.id !== tempId)]
+      const merged = mergeExpedientes(synced, synced)
+      setExpedientes(merged)
       if (storageKey) {
-        localStorage.setItem(storageKey, JSON.stringify(sincronizados))
+        localStorage.setItem(storageKey, JSON.stringify(merged))
       }
 
       toast.success(`Expediente guardado: ${datos.nombreEmpleado}`)
     } catch (err) {
       console.error('Error guardando expediente:', err)
       toast.error('Error al guardar el expediente. Por favor intenta nuevamente.')
+      setExpedientes(expedientes)
+      if (storageKey) {
+        localStorage.setItem(storageKey, JSON.stringify(expedientes))
+      }
     }
   }
 
   async function eliminar(id: string) {
     const expediente = expedientes.find(e => e.id === id)
     const nombreEmpleado = expediente?.nombreEmpleado || 'expediente'
-    
+    const previousExpedientes = expedientes
+
     const actualizados = expedientes.filter(e => e.id !== id)
     setExpedientes(actualizados)
     if (storageKey) {
@@ -229,11 +292,15 @@ export function useExpedientes() {
     }
 
     try {
-      await eliminarExpedienteSupabase(id)
+      await retryWithBackoff(() => eliminarExpedienteSupabase(id))
       toast.success(`Expediente eliminado: ${nombreEmpleado}`)
     } catch (err) {
       console.error('Error eliminando expediente:', err)
       toast.error('Error al eliminar el expediente. Por favor intenta nuevamente.')
+      setExpedientes(previousExpedientes)
+      if (storageKey) {
+        localStorage.setItem(storageKey, JSON.stringify(previousExpedientes))
+      }
     }
   }
 
