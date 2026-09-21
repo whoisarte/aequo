@@ -2,9 +2,9 @@ import type { DIContainer, EnvironmentMode, StripeServiceInterface, MinimumWageS
 import { createMockSupabaseClient, type MockSupabaseClient } from './mock-supabase'
 
 export const getMode = (): EnvironmentMode => {
-  if (process.env.NEXT_PUBLIC_APP_MODE === 'production') return 'production'
-  if (process.env.NODE_ENV === 'production') return 'production'
   if (process.env.NEXT_PUBLIC_APP_MODE === 'local') return 'local'
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'production') return 'production'
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'development') return 'development'
   return 'development'
 }
 

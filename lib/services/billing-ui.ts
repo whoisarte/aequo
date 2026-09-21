@@ -25,7 +25,7 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
     return [];
   }
 
-  const quantityKeywords = ['documentos', 'generaciones', 'docs'];
+  const quantityKeywords = ['documentos', 'generaciones', 'docs', 'generations'];
 
   const filteredData = data
     .map(plan => ({

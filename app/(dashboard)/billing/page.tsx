@@ -18,6 +18,7 @@ interface Plan {
   features: string[]
   doc_limit: number
   currency: string
+  plan_type?: string
 }
 
 interface GenerationUsage {
@@ -381,7 +382,7 @@ export default function BillingPage() {
 
   const productsForUI = plans.map(p => {
     const docCount = p.features
-      ?.find((f: string) => f.toLowerCase().includes('generaciones') || f.toLowerCase().includes('documentos'))
+      ?.find((f: string) => f.toLowerCase().includes('generaciones') || f.toLowerCase().includes('documentos') || f.toLowerCase().includes('generations'))
       ?.match(/\d+/)
       ?.[0] || 'Ilimitado'
 
@@ -393,6 +394,7 @@ export default function BillingPage() {
       currency: 'mxn',
       features: p.features,
       doc_limit: p.doc_limit,
+      plan_type: p.plan_type,
       displayLimit: docCount
     }
   })

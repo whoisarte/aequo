@@ -1,6 +1,6 @@
 # Production Readiness — Status
 
-> **Status**: Supabase configured. Stripe webhooks created. Waiting on Stripe API keys, Stripe products, and Vercel env vars.
+> **Status**: Infrastructure complete. Ready for payment flow testing.
 
 ---
 
@@ -15,11 +15,10 @@
 - [x] All tables created with proper RLS policies
 - [x] `profiles` — RLS: SELECT, INSERT, UPDATE (user only)
 - [x] `expedientes` — RLS: SELECT, INSERT, UPDATE, DELETE (user only)
-- [x] `subscriptions` — RLS: SELECT (user only)
-- [x] `products` — RLS: public read (active only)
+- [x] `subscriptions` — RLS: SELECT (user only) + service role full access
+- [x] `products` — RLS: public read (active only), `plan_type` column
 - [x] `minimum_wages` — RLS: public read + seed data (2020-2026)
 - [x] `webhook_events` — RLS: service role full access + idempotency
-- [x] `doc_limit` column added to `products`
 - [x] Index on `expedientes.user_id`
 - [x] Index on `subscriptions.user_id`
 
@@ -34,18 +33,28 @@
 - [x] Single project with branch deployment
 - [x] Preview (`dev` branch): `aequo-eta-dev.vercel.app`
 - [x] Production (`main` branch): `aequo-eta.vercel.app`
+- [x] Environment variables configured for both environments
 
 ### Stripe Integration (Code)
-- [x] Stripe API version set to `2026-08-26.dahlia` (Stripe library default)
+- [x] Stripe API version set to `2026-08-26.dahlia`
 - [x] Webhook handler with signature verification
 - [x] Webhook idempotency implemented
 - [x] Events handled: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
 
 ### Stripe Setup (Remote)
-- [x] Webhook endpoint created (dev + prod)
-- [ ] API keys obtained (dev + prod)
-- [ ] Stripe products created (dev + prod)
-- [ ] Products synced to Supabase `products` table (dev + prod)
+- [x] Webhook endpoint created (dev only — prod pending)
+- [x] API keys obtained (dev + prod)
+- [x] Stripe products created (dev + prod)
+- [x] Products synced to Supabase `products` table (dev + prod)
+
+### Products Table (Plans)
+
+| Plan | Price | Type | Generations |
+|------|-------|------|-------------|
+| Plan Básico | $200 MXN/mo | subscription | 100 |
+| Plan Avanzado | $350 MXN/mo | subscription | 250 |
+| Plan Profesional | $600 MXN/mo | subscription | 500 |
+| Generación individual | $50 MXN | one_time | 1 |
 
 ### Input Validation
 - [x] Zod LSP error fixed (`@hookform/resolvers` upgraded to 5.9.1)
@@ -64,68 +73,19 @@
   - `calendario/error.tsx`
   - `estilo/error.tsx`
 
+### Gemini Integration
+- [x] API key configured in Vercel (same for dev + prod)
+- [x] System prompt configured for Mexican labor law chatbot
+
 ---
 
-## 🔴 Remaining — Infrastructure (You)
+## 🔴 Remaining — Infrastructure
 
-### 1. Stripe API Keys
-- [ ] Dev: copy `pk_test_...` and `sk_test_...` from Stripe Dashboard → **Developers → API keys**
-- [ ] Prod: copy `pk_live_...` and `sk_live_...` from Stripe Dashboard
+### 1. Live Stripe Webhook
+- [ ] Create live webhook endpoint in Stripe Dashboard
+- [ ] Add `STRIPE_WEBHOOK_SECRET` to Vercel production env vars
 
-### 2. Stripe Products (Dev + Prod)
-Create in **Dashboard → Products → Add product**:
-
-**Plan Profesional:**
-- Pricing: Recurring, monthly, your chosen amount
-- Copy `price_ID` after creation
-
-**Generación individual:**
-- Pricing: One-time or recurring (per your billing logic)
-- Copy `price_ID` after creation
-
-### 3. Sync Stripe Products to Supabase
-Run in **SQL Editor** for dev and prod:
-
-```sql
-INSERT INTO public.products (name, description, price_cents, currency, features, doc_limit, stripe_price_id, stripe_product_id)
-VALUES
-  ('Plan Profesional', 'Plan Profesional description', 29900, 'mxn', '{"unlimited"}', 999, 'price_DEV_XXX', 'prod_DEV_XXX'),
-  ('Generación individual', 'Generación individual description', 9900, 'mxn', '{"single_doc"}', 1, 'price_DEV_YYY', 'prod_DEV_YYY');
-```
-
-Replace `price_DEV_XXX` with actual Price IDs from Stripe.
-
-### 4. Gemini API Key
-- [ ] Get from [Google AI Studio](https://aistudio.google.com/apikey)
-- [ ] Same key for dev and prod
-
-### 5. Vercel Environment Variables
-
-**Preview (`aequo-eta-dev.vercel.app`):**
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_APP_MODE` | `development` |
-| `NEXT_PUBLIC_SUPABASE_URL` | From Supabase dev → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase dev → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase dev → Settings → API |
-| `STRIPE_SECRET_KEY` | `sk_test_...` |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
-| `NEXT_PUBLIC_STRIPE_PUBLIC_KEY` | `pk_test_...` |
-| `GEMINI_API_KEY` | From Google AI Studio |
-
-**Production (`aequo-eta.vercel.app`):**
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_APP_MODE` | `production` |
-| `NEXT_PUBLIC_SUPABASE_URL` | From Supabase prod → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase prod → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase prod → Settings → API |
-| `STRIPE_SECRET_KEY` | `sk_live_...` |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
-| `NEXT_PUBLIC_STRIPE_PUBLIC_KEY` | `pk_live_...` |
-| `GEMINI_API_KEY` | From Google AI Studio |
-
-### 6. Custom Domain
+### 2. Custom Domain
 - [ ] Configure `aequo.app` domain in Vercel
 - [ ] Add DNS records
 
@@ -169,8 +129,8 @@ These exist in the codebase but are not blocking:
 | Mode | Supabase | Stripe | Auth |
 |------|----------|--------|------|
 | `local` | Mock | Mock | Auto-login as mock-user-1 |
-| `development` | Real | Real (test mode) | Real Supabase Auth |
-| `production` | Real | Real (live mode) | Real Supabase Auth |
+| `development` | Real (dev) | Real (test mode) | Real Supabase Auth |
+| `production` | Real (prod) | Real (live mode) | Real Supabase Auth |
 
 ---
 
@@ -184,12 +144,13 @@ These exist in the codebase but are not blocking:
 - [x] Cookie consent
 - [x] Vercel project configured (single project, branch-based)
 - [x] Supabase projects configured + schema run
-- [x] Stripe webhook endpoints created
-- [ ] Stripe API keys configured in Vercel
-- [ ] Stripe products created + synced to Supabase
-- [ ] Gemini API key configured in Vercel
+- [x] Stripe webhook endpoint created (dev)
+- [x] Stripe API keys configured in Vercel
+- [x] Stripe products created + synced to Supabase
+- [x] Gemini API key configured in Vercel
+- [ ] Live Stripe webhook created
 - [ ] Custom domain configured
 - [ ] Integration tests passing
 - [ ] E2E tests passing
 - [ ] Load testing completed
-- [ ] Payment flow tested with real Stripe
+- [ ] Payment flow tested with Stripe test cards

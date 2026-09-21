@@ -13,6 +13,7 @@ interface Product {
   currency: string;
   features: string[];
   doc_limit: number;
+  plan_type?: string;
   displayLimit?: string | number;
 }
 
@@ -23,7 +24,6 @@ interface PaymentSectionProps {
 
 export default function PaymentSection({ products, isSubscribed }: PaymentSectionProps) {
   const toast = useToast()
-  const INDIVIDUAL_PRODUCT_ID = '4aa9fed4-5fb3-4bf2-8bc8-5324319cb021';
   const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null)
 
   const handleSubscribe = async (planId: string) => {
@@ -56,7 +56,7 @@ export default function PaymentSection({ products, isSubscribed }: PaymentSectio
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {products
-          .filter(p => p.id !== INDIVIDUAL_PRODUCT_ID)
+          .filter(p => p.plan_type !== 'one_time')
           .map((plan) => {
             const generationCount = plan.displayLimit || plan.doc_limit.toLocaleString()
             
