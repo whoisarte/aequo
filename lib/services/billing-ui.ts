@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { PlanType } from '@/lib/constants/billing';
 
 export type PricingPlan = {
   id: string;
@@ -7,13 +8,14 @@ export type PricingPlan = {
   price_cents: number;
   features: string[];
   doc_limit: number;
-  currency: string; // Added currency property
+  currency: string;
+  plan_type: PlanType;
 };
 
 export async function getPricingPlans(): Promise<PricingPlan[]> {
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, description, price_cents, features, doc_limit, currency') // Ensure currency is selected
+    .select('id, name, description, price_cents, features, doc_limit, currency, plan_type')
     .eq('is_active', true)
     .eq('currency', 'mxn')
     .order('price_cents', { ascending: true });
@@ -28,9 +30,9 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
   const filteredData = data
     .map(plan => ({
       ...plan,
-      features: plan.features.filter((feature: string) =>
+      features: plan.features?.filter((feature: string) =>
         quantityKeywords.some(keyword => feature.toLowerCase().includes(keyword))
-      ),
+      ) || [],
     }));
 
   return filteredData as PricingPlan[];

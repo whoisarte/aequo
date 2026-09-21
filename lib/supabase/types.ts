@@ -91,10 +91,10 @@ export type Database = {
           doc_limit: number | null
           features: string[] | null
           id: string
-          idx: number
           is_active: boolean | null
           name: string
           price_cents: number
+          plan_type: string | null
           stripe_price_id: string | null
           stripe_product_id: string | null
           updated_at: string | null
@@ -105,11 +105,11 @@ export type Database = {
           description?: string | null
           doc_limit?: number | null
           features?: string[] | null
-          id: string
-          idx: number
+          id?: string
           is_active?: boolean | null
           name: string
           price_cents: number
+          plan_type?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           updated_at?: string | null
@@ -121,10 +121,10 @@ export type Database = {
           doc_limit?: number | null
           features?: string[] | null
           id?: string
-          idx?: number
           is_active?: boolean | null
           name?: string
           price_cents?: number
+          plan_type?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           updated_at?: string | null
@@ -239,21 +239,21 @@ export type Database = {
           created_at: string | null
           event_id: string
           event_type: string | null
-          processed: boolean | null
+          processed_at: string | null
         }
         Insert: {
           body?: Json | null
           created_at?: string | null
           event_id: string
           event_type?: string | null
-          processed?: boolean | null
+          processed_at?: string | null
         }
         Update: {
           body?: Json | null
           created_at?: string | null
           event_id?: string
           event_type?: string | null
-          processed?: boolean | null
+          processed_at?: string | null
         }
         Relationships: []
       }

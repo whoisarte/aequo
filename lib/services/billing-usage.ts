@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { PlanType } from '@/lib/constants/billing';
 
 export async function checkUserSubscription(userId: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
@@ -22,6 +23,7 @@ export async function getSingleGenerationProduct() {
     .from('products')
     .select('id, stripe_price_id, price_cents')
     .eq('name', 'Generación individual')
+    .eq('plan_type', PlanType.OneTime)
     .single();
 
   if (error) return null;
@@ -59,7 +61,6 @@ export async function getUserDocumentCount(userId: string): Promise<number> {
 }
 
 export async function canGenerateDocument(userId: string) {
-  // 1. Obtener todas las suscripciones y limpiar duplicados
   const { data: allSubs, error } = await supabaseAdmin
     .from('subscriptions')
     .select('id, plan, status, created_at')
@@ -67,31 +68,33 @@ export async function canGenerateDocument(userId: string) {
     .in('status', ['active', 'trialing'])
     .order('created_at', { ascending: false });
 
-  if (error || !allSubs || allSubs.length === 0) return { canGenerate: false, reason: 'no_subscription' };
-  
-  // Cleanup duplicates
+  if (error || !allSubs || allSubs.length === 0) {
+    return { canGenerate: false, reason: 'no_subscription' };
+  }
+
   if (allSubs.length > 1) {
     const idsToDelete = allSubs.slice(1).map(s => s.id);
     await supabaseAdmin.from('subscriptions').delete().in('id', idsToDelete);
   }
-  
+
   const subscription = allSubs[0];
 
-  // 2. Obtener el límite del plan contratado
   const { data: product } = await supabaseAdmin
     .from('products')
-    .select('doc_limit')
+    .select('doc_limit, plan_type')
     .eq('id', subscription.plan)
     .single();
 
-  const limit = product?.doc_limit || 0;
-  
-  // 3. Obtener documentos usados en el mes actual
+  if (!product) {
+    return { canGenerate: false, reason: 'plan_not_found' };
+  }
+
+  const limit = product.doc_limit || 0;
   const used = await getUserDocumentCount(userId);
 
-  return { 
-    canGenerate: used < limit, 
-    used, 
+  return {
+    canGenerate: used < limit,
+    used,
     limit,
     reason: used >= limit ? 'limit_exceeded' : null
   };

@@ -5,7 +5,7 @@ const getStripe = async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const StripeModule = (await import('stripe')) as any
   return new StripeModule.default(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
-    apiVersion: '2026-04-22.dahlia',
+    apiVersion: '2026-08-26.dahlia',
   })
 }
 

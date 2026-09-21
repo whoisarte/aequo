@@ -55,9 +55,11 @@ CREATE POLICY "Users can insert own expedientes" ON expedientes FOR INSERT WITH 
 CREATE POLICY "Users can update own expedientes" ON expedientes FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own expedientes" ON expedientes FOR DELETE USING (auth.uid() = user_id);
 
--- RLS for subscriptions: users read only their own
+-- RLS for subscriptions: users read only their own, service role can do all
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service role has full access to subscriptions" ON subscriptions
+  AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
 
 -- Crear la tabla 'products'
 CREATE TABLE public.products (
@@ -68,13 +70,15 @@ CREATE TABLE public.products (
   currency text NOT NULL DEFAULT 'mxn',
   features text[] DEFAULT '{}'::text[] NOT NULL,
   is_active boolean NOT NULL DEFAULT TRUE,
-  doc_limit integer NOT NULL DEFAULT 0,
+  plan_type text NOT NULL DEFAULT 'subscription', -- 'subscription' o 'one_time'
+  doc_limit integer NOT NULL DEFAULT 0, -- Número de generaciones permitidas (0 = ilimitado para subscriptions, 1 para one_time)
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   stripe_product_id text UNIQUE NULL,
-  stripe_price_id text UNIQUE NULL, -- Útil si usas Stripe Subscriptions con Price IDs
+  stripe_price_id text UNIQUE NULL,
 
-  CONSTRAINT products_pkey PRIMARY KEY (id)
+  CONSTRAINT products_pkey PRIMARY KEY (id),
+  CONSTRAINT products_plan_type_check CHECK (plan_type IN ('subscription', 'one_time'))
 );
 
 -- Habilitar Row Level Security (RLS) si es necesario (generalmente sí para Supabase)

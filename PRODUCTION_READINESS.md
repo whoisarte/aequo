@@ -1,6 +1,6 @@
 # Production Readiness — Status
 
-> **Status**: The codebase is feature-complete. The following documents what has been completed and what remains before production launch.
+> **Status**: Supabase configured. Stripe webhooks created. Waiting on Stripe API keys, Stripe products, and Vercel env vars.
 
 ---
 
@@ -23,11 +23,29 @@
 - [x] Index on `expedientes.user_id`
 - [x] Index on `subscriptions.user_id`
 
-### Stripe Integration
+### Supabase Setup
+- [x] `aequo-dev` project created + schema run
+- [x] `aequo-prod` project created + schema run
+- [x] Auth callback URLs configured:
+  - Dev: `https://aequo-eta-dev.vercel.app/auth/callback`
+  - Prod: `https://aequo-eta.vercel.app/auth/callback`
+
+### Vercel Setup
+- [x] Single project with branch deployment
+- [x] Preview (`dev` branch): `aequo-eta-dev.vercel.app`
+- [x] Production (`main` branch): `aequo-eta.vercel.app`
+
+### Stripe Integration (Code)
 - [x] Stripe API version set to `2026-08-26.dahlia` (Stripe library default)
 - [x] Webhook handler with signature verification
 - [x] Webhook idempotency implemented
 - [x] Events handled: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
+
+### Stripe Setup (Remote)
+- [x] Webhook endpoint created (dev + prod)
+- [ ] API keys obtained (dev + prod)
+- [ ] Stripe products created (dev + prod)
+- [ ] Products synced to Supabase `products` table (dev + prod)
 
 ### Input Validation
 - [x] Zod LSP error fixed (`@hookform/resolvers` upgraded to 5.9.1)
@@ -50,42 +68,62 @@
 
 ## 🔴 Remaining — Infrastructure (You)
 
-These require your action in external services:
+### 1. Stripe API Keys
+- [ ] Dev: copy `pk_test_...` and `sk_test_...` from Stripe Dashboard → **Developers → API keys**
+- [ ] Prod: copy `pk_live_...` and `sk_live_...` from Stripe Dashboard
 
-### 1. Create Vercel Projects
-- [ ] Create `aequo-dev` project (branch: main, alias: `aequo-dev.vercel.app`)
-- [ ] Create `aequo-prod` project (branch: main, alias: `aequo.app`)
+### 2. Stripe Products (Dev + Prod)
+Create in **Dashboard → Products → Add product**:
 
-### 2. Create Supabase Projects
-- [ ] Create `aequo-dev` project
-- [ ] Create `aequo-prod` project
-- [ ] Run `db/schema.sql` on both
-- [ ] Configure Auth callback URLs:
-  - Dev: `https://aequo-dev.vercel.app/auth/callback`
-  - Prod: `https://aequo.app/auth/callback`
+**Plan Profesional:**
+- Pricing: Recurring, monthly, your chosen amount
+- Copy `price_ID` after creation
 
-### 3. Stripe Setup
-- [ ] Dev account: test mode API keys
-- [ ] Prod account: live mode API keys
-- [ ] Configure webhook endpoints:
-  - Dev: `https://aequo-dev.vercel.app/api/webhooks/stripe`
-  - Prod: `https://aequo.app/api/webhooks/stripe`
+**Generación individual:**
+- Pricing: One-time or recurring (per your billing logic)
+- Copy `price_ID` after creation
 
-### 4. Environment Variables in Vercel
-Configure per project:
-- [ ] `NEXT_PUBLIC_APP_MODE` (`development` / `production`)
-- [ ] `NEXT_PUBLIC_SUPABASE_URL`
-- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- [ ] `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] `STRIPE_SECRET_KEY`
-- [ ] `STRIPE_WEBHOOK_SECRET`
-- [ ] `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`
-- [ ] `GEMINI_API_KEY`
+### 3. Sync Stripe Products to Supabase
+Run in **SQL Editor** for dev and prod:
 
-### 5. Stripe Products
-- [ ] Create Plan Profesional in both Stripe dashboards
-- [ ] Create Generación individual in both Stripe dashboards
-- [ ] Sync `stripe_price_id` to Supabase `products` table
+```sql
+INSERT INTO public.products (name, description, price_cents, currency, features, doc_limit, stripe_price_id, stripe_product_id)
+VALUES
+  ('Plan Profesional', 'Plan Profesional description', 29900, 'mxn', '{"unlimited"}', 999, 'price_DEV_XXX', 'prod_DEV_XXX'),
+  ('Generación individual', 'Generación individual description', 9900, 'mxn', '{"single_doc"}', 1, 'price_DEV_YYY', 'prod_DEV_YYY');
+```
+
+Replace `price_DEV_XXX` with actual Price IDs from Stripe.
+
+### 4. Gemini API Key
+- [ ] Get from [Google AI Studio](https://aistudio.google.com/apikey)
+- [ ] Same key for dev and prod
+
+### 5. Vercel Environment Variables
+
+**Preview (`aequo-eta-dev.vercel.app`):**
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_APP_MODE` | `development` |
+| `NEXT_PUBLIC_SUPABASE_URL` | From Supabase dev → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase dev → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase dev → Settings → API |
+| `STRIPE_SECRET_KEY` | `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
+| `NEXT_PUBLIC_STRIPE_PUBLIC_KEY` | `pk_test_...` |
+| `GEMINI_API_KEY` | From Google AI Studio |
+
+**Production (`aequo-eta.vercel.app`):**
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_APP_MODE` | `production` |
+| `NEXT_PUBLIC_SUPABASE_URL` | From Supabase prod → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase prod → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase prod → Settings → API |
+| `STRIPE_SECRET_KEY` | `sk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
+| `NEXT_PUBLIC_STRIPE_PUBLIC_KEY` | `pk_live_...` |
+| `GEMINI_API_KEY` | From Google AI Studio |
 
 ### 6. Custom Domain
 - [ ] Configure `aequo.app` domain in Vercel
@@ -95,15 +133,9 @@ Configure per project:
 
 ## 🟡 Remaining — Code (Optional Improvements)
 
-These are not blocking but improve production quality:
-
 ### Error Logging
 - [ ] Integrate **Sentry** or use Vercel Analytics
 - [ ] Structured logging for billing failures, auth failures, Supabase errors
-
-### Stripe Price Sync
-- [ ] Products in Supabase `products` table must have correct `stripe_price_id` from Stripe Dashboard
-- [ ] Currently manual — consider automation
 
 ### Polish
 - [ ] Per-page loading states (skeleton screens)
@@ -150,11 +182,12 @@ These exist in the codebase but are not blocking:
 - [x] Zod validation on API routes
 - [x] Legal pages (privacy, terms)
 - [x] Cookie consent
-- [ ] Vercel projects configured
-- [ ] Supabase projects configured + schema run
-- [ ] Stripe accounts configured + webhooks set up
-- [ ] Environment variables in Vercel
-- [ ] Stripe products synced to Supabase
+- [x] Vercel project configured (single project, branch-based)
+- [x] Supabase projects configured + schema run
+- [x] Stripe webhook endpoints created
+- [ ] Stripe API keys configured in Vercel
+- [ ] Stripe products created + synced to Supabase
+- [ ] Gemini API key configured in Vercel
 - [ ] Custom domain configured
 - [ ] Integration tests passing
 - [ ] E2E tests passing

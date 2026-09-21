@@ -3,15 +3,12 @@
 import { getPricingPlans, getUserSubscription } from '@/lib/services/billing-ui'
 import { createClient } from '@/lib/supabase/server'
 import { checkAccess } from '@/lib/services/billing-actions'
-// Assuming User, Subscription, PricingPlan, GenerationUsage types are defined elsewhere or can be inferred.
-// For clarity, let's define the expected structures based on usage.
+import type { PlanType } from '@/lib/constants/billing'
 
-// Placeholder types if not explicitly imported or defined globally
-// In a real scenario, these would be imported or defined properly.
-type User = any; 
-type Subscription = { plan: any; status: any; current_period_end: any; };
-type PricingPlan = { id: string; name: string; description: string | null; price_cents: number; features: string[]; doc_limit: number; currency: string; };
-type GenerationUsage = { canGenerate: boolean; used?: number; limit?: number; reason?: string | null; };
+type User = unknown;
+type Subscription = { plan: string; status: string; current_period_end: string | null };
+type PricingPlan = { id: string; name: string; description: string | null; price_cents: number; features: string[]; doc_limit: number; currency: string; plan_type: PlanType };
+type GenerationUsage = { canGenerate: boolean; used?: number; limit?: number; reason?: string | null };
 
 // Define the structure for a successful result
 type BillingPageSuccessResult = {
