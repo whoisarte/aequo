@@ -6,12 +6,12 @@ import moment from 'moment'
 import 'moment/locale/es'
 import Card from '@/components/ui/Card'
 import Heading from '@/components/ui/Heading'
-import Popover from '@/components/ui/Popover'
+import CalendarFormView from '@/components/calendario/CalendarFormView'
 import EventForm from '@/components/calendario/EventForm'
 import ConciliacionForm from '@/components/expedientes/ConciliacionForm'
 import { useExpedientes } from '@/hooks/useExpedientes'
 import { updateExpedienteConciliacion } from '@/lib/services/expedientes-actions.server'
-import { createCalendarEvent, getCalendarEvents } from '@/lib/services/calendar-actions.server'
+import { createCalendarEvent, updateCalendarEvent, getCalendarEvents } from '@/lib/services/calendar-actions.server'
 import { useToast } from '@/lib/toast'
 
 import './calendar-custom.css'
@@ -31,16 +31,17 @@ interface CalendarEvent {
   expedienteInitialDescription?: string | null;
 }
 
+type ActiveForm =
+  | { mode: 'create'; start: Date | null; end: Date | null }
+  | { mode: 'edit-event'; event: CalendarEvent }
+  | { mode: 'edit-expediente'; event: CalendarEvent }
+
 export default function CalendarioPage() {
   const { expedientes, cargando, error, recargar } = useExpedientes()
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarEventsLoading, setCalendarEventsLoading] = useState(true);
   const [myEvents, setMyEvents] = useState<CalendarEvent[]>([]);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
-  const [selectedExpedienteEvent, setSelectedExpedienteEvent] = useState<CalendarEvent | null>(null);
-  const [popoverX, setPopoverX] = useState(0);
-  const [popoverY, setPopoverY] = useState(0);
+  const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
   const toast = useToast()
 
   const loadCalendarEvents = useCallback(async () => {
@@ -83,64 +84,41 @@ export default function CalendarioPage() {
     }
   }, [expedientes, cargando, error, calendarEvents, calendarEventsLoading]);
 
-  const handleSelectSlot = (slotInfo: { start: Date, end: Date, action: 'select' | 'click' | 'doubleClick', bounds?: any, box?: any }) => {
-    setSelectedExpedienteEvent(null);
-    if (slotInfo.box) {
-        setPopoverX(slotInfo.box.x + window.scrollX);
-        setPopoverY(slotInfo.box.y + window.scrollY);
-    } else {
-        setPopoverX(window.innerWidth / 2 - 150);
-        setPopoverY(window.innerHeight / 2 - 200);
-    }
-
-    setSelectedSlot({ start: slotInfo.start, end: slotInfo.end });
-    setIsPopoverOpen(true);
+  const handleSelectSlot = (slotInfo: { start: Date, end: Date }) => {
+    setActiveForm({ mode: 'create', start: slotInfo.start, end: slotInfo.end });
   }
 
-  const handleSelectEvent = useCallback((event: CalendarEvent, reactEvent: React.SyntheticEvent) => {
-    if (reactEvent && 'clientX' in reactEvent && 'clientY' in reactEvent && reactEvent.nativeEvent) {
-        setPopoverX((reactEvent.nativeEvent as MouseEvent).clientX);
-        setPopoverY((reactEvent.nativeEvent as MouseEvent).clientY);
-    } else {
-        setPopoverX(window.innerWidth / 2 - 150);
-        setPopoverY(window.innerHeight / 2 - 200);
-    }
-
+  const handleSelectEvent = useCallback((event: CalendarEvent) => {
     if (event.isExpedienteEvent && event.expedienteId) {
-      setSelectedExpedienteEvent(event);
-      setSelectedSlot({ start: event.start, end: event.end });
-      setIsPopoverOpen(true);
+      setActiveForm({ mode: 'edit-expediente', event });
     } else {
-      setSelectedExpedienteEvent(null);
-      setSelectedSlot({ start: event.start, end: event.end });
-      window.alert(`Evento: ${event.title}\nDescripción: ${event.description || 'N/A'}\nInicio: ${moment(event.start).format('LLL')}\nFin: ${moment(event.end).format('LLL')}`);
+      setActiveForm({ mode: 'edit-event', event });
     }
   }, []);
 
-  const handleClosePopover = () => {
-    setIsPopoverOpen(false);
-    setSelectedSlot({ start: null, end: null });
-    setSelectedExpedienteEvent(null);
-    setPopoverX(0);
-    setPopoverY(0);
+  const handleCloseForm = () => {
+    setActiveForm(null);
   };
 
   const handleSaveEvent = async (eventData: { title: string; description: string; start: Date; end: Date }) => {
-    const result = await createCalendarEvent({
+    const payload = {
       title: eventData.title,
       description: eventData.description,
       start: eventData.start.toISOString(),
       end: eventData.end.toISOString(),
-    })
-
-    if (result.success) {
-      toast.success('Evento creado correctamente.')
-      await loadCalendarEvents()
-    } else {
-      toast.error(`Error al crear evento: ${result.error}`)
     }
 
-    handleClosePopover()
+    const result = activeForm?.mode === 'edit-event'
+      ? await updateCalendarEvent(activeForm.event.id, payload)
+      : await createCalendarEvent(payload)
+
+    if (result.success) {
+      toast.success(activeForm?.mode === 'edit-event' ? 'Evento actualizado correctamente.' : 'Evento creado correctamente.')
+      await loadCalendarEvents()
+      handleCloseForm()
+    } else {
+      toast.error(`Error al guardar el evento: ${result.error}`)
+    }
   }
 
   const handleSaveConciliacionEvent = async (id: string, date?: string, title?: string, description?: string) => {
@@ -152,11 +130,15 @@ export default function CalendarioPage() {
     if (result.success) {
       toast.success('Fecha de audiencia actualizada correctamente.');
       await recargar();
+      handleCloseForm();
     } else {
       toast.error(`Error al actualizar la fecha de audiencia: ${result.error}`);
     }
-    handleClosePopover();
   };
+
+  let formTitle = 'Añadir Nuevo Evento'
+  if (activeForm?.mode === 'edit-event') formTitle = 'Editar Evento'
+  else if (activeForm?.mode === 'edit-expediente') formTitle = 'Editar fecha de audiencia'
 
   return (
     <main>
@@ -191,31 +173,36 @@ export default function CalendarioPage() {
         </div>
       </Card>
 
-      <Popover
-        isOpen={isPopoverOpen}
-        onClose={handleClosePopover}
-        title={selectedExpedienteEvent ? 'Editar fecha de audiencia' : 'Añadir Nuevo Evento'}
-        x={popoverX}
-        y={popoverY}
-      >
-        {selectedExpedienteEvent && selectedExpedienteEvent.expedienteId ? (
-          <ConciliacionForm
-            expedienteId={selectedExpedienteEvent.expedienteId}
-            initialDate={moment(selectedExpedienteEvent.start).toISOString()}
-            initialTitle={selectedExpedienteEvent.expedienteInitialTitle}
-            initialDescription={selectedExpedienteEvent.expedienteInitialDescription}
-            onCancel={handleClosePopover}
-            onSubmit={handleSaveConciliacionEvent}
-          />
-        ) : (
-          <EventForm
-            initialStart={selectedSlot.start}
-            initialEnd={selectedSlot.end}
-            onCancel={handleClosePopover}
-            onSubmit={handleSaveEvent}
-          />
-        )}
-      </Popover>
+      {activeForm && (
+        <CalendarFormView title={formTitle} onClose={handleCloseForm}>
+          {activeForm.mode === 'edit-expediente' ? (
+            <ConciliacionForm
+              expedienteId={activeForm.event.expedienteId!}
+              initialDate={moment(activeForm.event.start).toISOString()}
+              initialTitle={activeForm.event.expedienteInitialTitle}
+              initialDescription={activeForm.event.expedienteInitialDescription}
+              onCancel={handleCloseForm}
+              onSubmit={handleSaveConciliacionEvent}
+            />
+          ) : activeForm.mode === 'edit-event' ? (
+            <EventForm
+              initialTitle={activeForm.event.title}
+              initialDescription={activeForm.event.description}
+              initialStart={activeForm.event.start}
+              initialEnd={activeForm.event.end}
+              onCancel={handleCloseForm}
+              onSubmit={handleSaveEvent}
+            />
+          ) : (
+            <EventForm
+              initialStart={activeForm.start}
+              initialEnd={activeForm.end}
+              onCancel={handleCloseForm}
+              onSubmit={handleSaveEvent}
+            />
+          )}
+        </CalendarFormView>
+      )}
     </main>
   )
 }
