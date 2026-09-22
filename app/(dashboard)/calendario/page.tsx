@@ -16,7 +16,6 @@ import { useToast } from '@/lib/toast'
 
 import './calendar-custom.css'
 
-// Set moment's locale globally if desired, or pass it to localizer
 moment.locale('es')
 const localizer = momentLocalizer(moment)
 
@@ -26,20 +25,17 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   description?: string;
-  isExpedienteEvent?: boolean; // Flag to identify expediente-related events
-  expedienteId?: string; // Original expediente ID
-  expedienteInitialTitle?: string | null; // Original conciliation title from expediente
-  expedienteInitialDescription?: string | null; // Original conciliation description from expediente
+  isExpedienteEvent?: boolean;
+  expedienteId?: string;
+  expedienteInitialTitle?: string | null;
+  expedienteInitialDescription?: string | null;
 }
-
-// Initial events array - will be combined with expedientes
-const initialEvents: CalendarEvent[] = []
 
 export default function CalendarioPage() {
   const { expedientes, cargando, error, recargar } = useExpedientes()
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [calendarEventsLoading, setCalendarEventsLoading] = useState(true);
-  const [myEvents, setMyEvents] = useState<CalendarEvent[]>(initialEvents);
+  const [myEvents, setMyEvents] = useState<CalendarEvent[]>([]);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [selectedExpedienteEvent, setSelectedExpedienteEvent] = useState<CalendarEvent | null>(null);
@@ -88,23 +84,20 @@ export default function CalendarioPage() {
   }, [expedientes, cargando, error, calendarEvents, calendarEventsLoading]);
 
   const handleSelectSlot = (slotInfo: { start: Date, end: Date, action: 'select' | 'click' | 'doubleClick', bounds?: any, box?: any }) => {
-    setSelectedExpedienteEvent(null); // Clear any previously selected expediente event
-    // Use box info if available, otherwise fallback to center of viewport
+    setSelectedExpedienteEvent(null);
     if (slotInfo.box) {
-        setPopoverX(slotInfo.box.x + window.scrollX); 
-        setPopoverY(slotInfo.box.y + window.scrollY); 
+        setPopoverX(slotInfo.box.x + window.scrollX);
+        setPopoverY(slotInfo.box.y + window.scrollY);
     } else {
-        // Fallback: position at center of viewport if box info isn't available
-        setPopoverX(window.innerWidth / 2 - 150); // -150 to roughly center a 300px wide popover
-        setPopoverY(window.innerHeight / 2 - 200); // -200 to roughly center a 400px tall popover
+        setPopoverX(window.innerWidth / 2 - 150);
+        setPopoverY(window.innerHeight / 2 - 200);
     }
-    
+
     setSelectedSlot({ start: slotInfo.start, end: slotInfo.end });
     setIsPopoverOpen(true);
   }
 
   const handleSelectEvent = useCallback((event: CalendarEvent, reactEvent: React.SyntheticEvent) => {
-    // Position popover near the clicked event
     if (reactEvent && 'clientX' in reactEvent && 'clientY' in reactEvent && reactEvent.nativeEvent) {
         setPopoverX((reactEvent.nativeEvent as MouseEvent).clientX);
         setPopoverY((reactEvent.nativeEvent as MouseEvent).clientY);
@@ -114,13 +107,12 @@ export default function CalendarioPage() {
     }
 
     if (event.isExpedienteEvent && event.expedienteId) {
-      setSelectedExpedienteEvent(event); // Set the selected expediente event for editing
-      setSelectedSlot({ start: event.start, end: event.end }); // Set selected slot for initial date
+      setSelectedExpedienteEvent(event);
+      setSelectedSlot({ start: event.start, end: event.end });
       setIsPopoverOpen(true);
     } else {
-      setSelectedExpedienteEvent(null); // Clear if not an expediente event
+      setSelectedExpedienteEvent(null);
       setSelectedSlot({ start: event.start, end: event.end });
-      // For generic events, we can show an alert or a different editing form
       window.alert(`Evento: ${event.title}\nDescripción: ${event.description || 'N/A'}\nInicio: ${moment(event.start).format('LLL')}\nFin: ${moment(event.end).format('LLL')}`);
     }
   }, []);
@@ -128,9 +120,9 @@ export default function CalendarioPage() {
   const handleClosePopover = () => {
     setIsPopoverOpen(false);
     setSelectedSlot({ start: null, end: null });
-    setSelectedExpedienteEvent(null); // Clear selected expediente event on close
-    setPopoverX(0); // Clear coordinates
-    setPopoverY(0); // Clear coordinates
+    setSelectedExpedienteEvent(null);
+    setPopoverX(0);
+    setPopoverY(0);
   };
 
   const handleSaveEvent = async (eventData: { title: string; description: string; start: Date; end: Date }) => {
@@ -153,13 +145,13 @@ export default function CalendarioPage() {
 
   const handleSaveConciliacionEvent = async (id: string, date?: string, title?: string, description?: string) => {
     if (!id) {
-      toast.error('Error: Expediente ID is missing.');
+      toast.error('Error: Expediente ID es requerido.');
       return;
     }
     const result = await updateExpedienteConciliacion(id, date, title, description);
     if (result.success) {
       toast.success('Fecha de audiencia actualizada correctamente.');
-      await recargar(); // Re-fetch expedientes to update UI
+      await recargar();
     } else {
       toast.error(`Error al actualizar la fecha de audiencia: ${result.error}`);
     }
@@ -170,7 +162,7 @@ export default function CalendarioPage() {
     <main>
       <Heading level={1} className="mb-4">Calendario</Heading>
       <Card padding="lg" className="h-full">
-        <div style={{ height: '700px' }}> {/* Set a height for the calendar */}
+        <div style={{ height: '700px' }}>
           <Calendar
             localizer={localizer}
             events={myEvents}
@@ -191,18 +183,17 @@ export default function CalendarioPage() {
               noEventsInRange: 'No hay eventos en este rango.',
               showMore: total => `+ Ver más (${total})`,
             }}
-            selectable // Allows selecting time slots
-            onSelectSlot={handleSelectSlot} // Changed to only pass slotInfo
-            onSelectEvent={handleSelectEvent} // Pass reactEvent
+            selectable
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
             defaultView="month"
           />
         </div>
       </Card>
 
-      {/* Event Creation/Editing Popover */}
-      <Popover 
-        isOpen={isPopoverOpen} 
-        onClose={handleClosePopover} 
+      <Popover
+        isOpen={isPopoverOpen}
+        onClose={handleClosePopover}
         title={selectedExpedienteEvent ? 'Editar fecha de audiencia' : 'Añadir Nuevo Evento'}
         x={popoverX}
         y={popoverY}

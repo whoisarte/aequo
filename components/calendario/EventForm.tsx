@@ -7,27 +7,31 @@ import moment from 'moment'
 import { useToast } from '@/lib/toast' // Import useToast
 
 interface EventFormProps {
+  initialTitle?: string
+  initialDescription?: string
   initialStart: Date | null
   initialEnd: Date | null
   onCancel: () => void
   onSubmit: (eventData: { title: string; description: string; start: Date; end: Date }) => void
 }
 
-export default function EventForm({ initialStart, initialEnd, onCancel, onSubmit }: EventFormProps) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+export default function EventForm({ initialTitle, initialDescription, initialStart, initialEnd, onCancel, onSubmit }: EventFormProps) {
+  const [title, setTitle] = useState(initialTitle || '')
+  const [description, setDescription] = useState(initialDescription || '')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
-  const toast = useToast() // Initialize useToast
+  const toast = useToast()
 
   useEffect(() => {
+    if (initialTitle) setTitle(initialTitle)
+    if (initialDescription) setDescription(initialDescription)
     if (initialStart) {
       setStart(moment(initialStart).format('YYYY-MM-DDTHH:mm'));
     }
     if (initialEnd) {
       setEnd(moment(initialEnd).format('YYYY-MM-DDTHH:mm'));
     }
-  }, [initialStart, initialEnd]);
+  }, [initialTitle, initialDescription, initialStart, initialEnd]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

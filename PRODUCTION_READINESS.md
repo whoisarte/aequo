@@ -95,7 +95,10 @@
 - [x] `calendar_events` table added (dev + prod schema)
 - [x] RLS: user CRUD only
 - [x] Server actions: `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent`, `getCalendarEvents`
-- [x] Generic events now persist to Supabase on create
+- [x] Generic events persist to Supabase on create/update/delete
+- [x] Route-driven modal (`?date=`, `?event=`, `?expediente=`) — calendar stays mounted underneath
+- [x] Edit/delete existing calendar events from modal
+- [x] Deep-linkable URLs for calendar events
 
 ---
 
