@@ -152,3 +152,22 @@ INSERT INTO public.minimum_wages (zone, year, daily_wage, effective_date) VALUES
   ('frontera_norte', 2024, 374.89, '2024-01-01'),
   ('frontera_norte', 2025, 419.88, '2025-01-01'),
   ('frontera_norte', 2026, 450.00, '2026-01-01');
+
+-- Tabla para eventos del calendario
+CREATE TABLE public.calendar_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text,
+  start_time timestamptz NOT NULL,
+  end_time timestamptz NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can CRUD own calendar events" ON public.calendar_events
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX idx_calendar_events_user_id ON public.calendar_events(user_id);

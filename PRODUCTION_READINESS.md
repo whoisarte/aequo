@@ -1,6 +1,6 @@
 # Production Readiness — Status
 
-> **Status**: Infrastructure complete. Ready for payment flow testing.
+> **Status**: Dev payment flow verified and working. Ready to test production flow.
 
 ---
 
@@ -28,6 +28,7 @@
 - [x] Auth callback URLs configured:
   - Dev: `https://aequo-eta-dev.vercel.app/auth/callback`
   - Prod: `https://aequo-eta.vercel.app/auth/callback`
+- [x] PostgreSQL grants applied (`GRANT SELECT ON public.* TO authenticated/service_role`)
 
 ### Vercel Setup
 - [x] Single project with branch deployment
@@ -42,7 +43,7 @@
 - [x] Events handled: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
 
 ### Stripe Setup (Remote)
-- [x] Webhook endpoint created (dev only — prod pending)
+- [x] Webhook endpoint created (dev + prod)
 - [x] API keys obtained (dev + prod)
 - [x] Stripe products created (dev + prod)
 - [x] Products synced to Supabase `products` table (dev + prod)
@@ -55,6 +56,14 @@
 | Plan Avanzado | $350 MXN/mo | subscription | 250 |
 | Plan Profesional | $600 MXN/mo | subscription | 500 |
 | Generación individual | $50 MXN | one_time | 1 |
+
+### Billing Code Fixes
+- [x] Mode detection fixed for Vercel (removed `NODE_ENV` override)
+- [x] Added `plan_type` to products interface and queries
+- [x] Fixed features filter keywords (added "generations" English)
+- [x] PaymentSection uses `plan_type` filter instead of hardcoded ID
+- [x] Created `PlanType` enum in `lib/constants/billing.ts`
+- [x] Mock products updated to match real products (4 plans, correct prices)
 
 ### Input Validation
 - [x] Zod LSP error fixed (`@hookform/resolvers` upgraded to 5.9.1)
@@ -77,13 +86,24 @@
 - [x] API key configured in Vercel (same for dev + prod)
 - [x] System prompt configured for Mexican labor law chatbot
 
+### Payment Flow Testing (Dev)
+- [x] Checkout redirect to Stripe works
+- [x] Stripe test card (`4242 4242 4242 4242`) works
+- [x] One-time purchase (`Generación individual`) works
+
+### Calendar Events Persistence
+- [x] `calendar_events` table added (dev + prod schema)
+- [x] RLS: user CRUD only
+- [x] Server actions: `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent`, `getCalendarEvents`
+- [x] Generic events now persist to Supabase on create
+
 ---
 
 ## 🔴 Remaining — Infrastructure
 
-### 1. Live Stripe Webhook
-- [ ] Create live webhook endpoint in Stripe Dashboard
-- [ ] Add `STRIPE_WEBHOOK_SECRET` to Vercel production env vars
+### 1. Production Payment Flow
+- [ ] Test production payment flow with Stripe live mode
+- [ ] Verify webhook processes live events correctly
 
 ### 2. Custom Domain
 - [ ] Configure `aequo.app` domain in Vercel
@@ -106,7 +126,6 @@
 - [ ] Integration tests (auth, billing, expediente, calculator flows)
 - [ ] E2E tests (Playwright)
 - [ ] Load testing (chatbot, DB, PDF generation)
-- [ ] Test payment flow with Stripe test cards
 
 ---
 
@@ -144,13 +163,14 @@ These exist in the codebase but are not blocking:
 - [x] Cookie consent
 - [x] Vercel project configured (single project, branch-based)
 - [x] Supabase projects configured + schema run
-- [x] Stripe webhook endpoint created (dev)
+- [x] Stripe webhook endpoint created (dev + prod)
 - [x] Stripe API keys configured in Vercel
 - [x] Stripe products created + synced to Supabase
 - [x] Gemini API key configured in Vercel
-- [ ] Live Stripe webhook created
+- [x] Dev payment flow tested and working
+- [x] Calendar events persist to Supabase
+- [ ] Production payment flow tested
 - [ ] Custom domain configured
 - [ ] Integration tests passing
 - [ ] E2E tests passing
 - [ ] Load testing completed
-- [ ] Payment flow tested with Stripe test cards

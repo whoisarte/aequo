@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
-import 'moment/locale/es' // Import Spanish locale for moment
+import 'moment/locale/es'
 import Card from '@/components/ui/Card'
 import Heading from '@/components/ui/Heading'
-import Popover from '@/components/ui/Popover' // Import the new Popover component
-import EventForm from '@/components/calendario/EventForm' // Import the EventForm component
-import ConciliacionForm from '@/components/expedientes/ConciliacionForm' // Import ConciliacionForm
-import { useExpedientes } from '@/hooks/useExpedientes' // Import useExpedientes
-import type { Expediente } from '@/hooks/useExpedientes' // Import Expediente type
-import { updateExpedienteConciliacion } from '@/lib/services/expedientes-actions.server' // Import the Server Action
-import { useToast } from '@/lib/toast' // Import useToast
+import Popover from '@/components/ui/Popover'
+import EventForm from '@/components/calendario/EventForm'
+import ConciliacionForm from '@/components/expedientes/ConciliacionForm'
+import { useExpedientes } from '@/hooks/useExpedientes'
+import { updateExpedienteConciliacion } from '@/lib/services/expedientes-actions.server'
+import { createCalendarEvent, getCalendarEvents } from '@/lib/services/calendar-actions.server'
+import { useToast } from '@/lib/toast'
 
 import './calendar-custom.css'
 
@@ -36,34 +36,56 @@ interface CalendarEvent {
 const initialEvents: CalendarEvent[] = []
 
 export default function CalendarioPage() {
-  const { expedientes, cargando, error, recargar } = useExpedientes() // Fetch expedientes and recargar
+  const { expedientes, cargando, error, recargar } = useExpedientes()
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarEventsLoading, setCalendarEventsLoading] = useState(true);
   const [myEvents, setMyEvents] = useState<CalendarEvent[]>(initialEvents);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
-  const [selectedExpedienteEvent, setSelectedExpedienteEvent] = useState<CalendarEvent | null>(null); // New state for selected expediente event
-  const [popoverX, setPopoverX] = useState(0); // State for Popover X position
-  const [popoverY, setPopoverY] = useState(0); // State for Popover Y position
-  const toast = useToast() // Initialize useToast
+  const [selectedExpedienteEvent, setSelectedExpedienteEvent] = useState<CalendarEvent | null>(null);
+  const [popoverX, setPopoverX] = useState(0);
+  const [popoverY, setPopoverY] = useState(0);
+  const toast = useToast()
+
+  const loadCalendarEvents = useCallback(async () => {
+    const result = await getCalendarEvents()
+    if (result.success && result.data) {
+      const events: CalendarEvent[] = result.data.map(event => ({
+        id: event.id,
+        title: event.title,
+        start: new Date(event.start_time),
+        end: new Date(event.end_time),
+        description: event.description || undefined,
+        isExpedienteEvent: false,
+      }))
+      setCalendarEvents(events)
+    }
+    setCalendarEventsLoading(false)
+  }, [])
 
   useEffect(() => {
-    if (!cargando && !error && expedientes) {
+    loadCalendarEvents()
+  }, [loadCalendarEvents])
+
+  useEffect(() => {
+    if (!cargando && !error && expedientes && !calendarEventsLoading) {
       const expedienteEvents: CalendarEvent[] = expedientes
-        .filter(exp => exp.conciliacionDate) // Only include expedientes with a conciliation date
+        .filter(exp => exp.conciliacionDate)
         .map(exp => ({
-          id: exp.id, // Use expediente ID as event ID
+          id: exp.id,
           title: `Audiencia: ${exp.nombreEmpleado}${exp.conciliacionTitle ? ` (${exp.conciliacionTitle})` : ''}`,
           start: moment(exp.conciliacionDate!).toDate(),
-          end: moment(exp.conciliacionDate!).add(1, 'hour').toDate(), // Assuming a 1-hour duration for simplicity
+          end: moment(exp.conciliacionDate!).add(1, 'hour').toDate(),
           description: exp.conciliacionDescription || `Audiencia de conciliación para ${exp.nombreEmpleado}.`,
-          isExpedienteEvent: true, // Mark as an expediente event
+          isExpedienteEvent: true,
           expedienteId: exp.id,
           expedienteInitialTitle: exp.conciliacionTitle,
           expedienteInitialDescription: exp.conciliacionDescription,
         }));
-      
-      setMyEvents([...initialEvents, ...expedienteEvents]);
+
+      setMyEvents([...expedienteEvents, ...calendarEvents]);
     }
-  }, [expedientes, cargando, error]);
+  }, [expedientes, cargando, error, calendarEvents, calendarEventsLoading]);
 
   const handleSelectSlot = (slotInfo: { start: Date, end: Date, action: 'select' | 'click' | 'doubleClick', bounds?: any, box?: any }) => {
     setSelectedExpedienteEvent(null); // Clear any previously selected expediente event
@@ -111,15 +133,23 @@ export default function CalendarioPage() {
     setPopoverY(0); // Clear coordinates
   };
 
-  const handleSaveEvent = (eventData: { title: string; description: string; start: Date; end: Date }) => {
-    // In a real application, you'd send this data to your API to save to Supabase
-    console.log('New event to save:', eventData);
-    
-    // For now, just add it to local state with a mock ID
-    setMyEvents([...myEvents, { ...eventData, id: `generic-${myEvents.length}` }]);
-    
-    handleClosePopover(); // Call the renamed close function
-  };
+  const handleSaveEvent = async (eventData: { title: string; description: string; start: Date; end: Date }) => {
+    const result = await createCalendarEvent({
+      title: eventData.title,
+      description: eventData.description,
+      start: eventData.start.toISOString(),
+      end: eventData.end.toISOString(),
+    })
+
+    if (result.success) {
+      toast.success('Evento creado correctamente.')
+      await loadCalendarEvents()
+    } else {
+      toast.error(`Error al crear evento: ${result.error}`)
+    }
+
+    handleClosePopover()
+  }
 
   const handleSaveConciliacionEvent = async (id: string, date?: string, title?: string, description?: string) => {
     if (!id) {
