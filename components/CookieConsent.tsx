@@ -1,39 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-
-const COOKIE_CONSENT_KEY = 'aequo_cookie_consent'
+import { useCookieConsent } from '@/lib/cookie-consent'
 
 export default function CookieConsent() {
-  const [showBanner, setShowBanner] = useState(false)
+  const { consent, hasConsented, acceptAll, acceptEssentialOnly } = useCookieConsent()
   const [showDetails, setShowDetails] = useState(false)
-  const hasCheckedStorage = useRef(false)
 
-  useEffect(() => {
-    if (hasCheckedStorage.current) return
-    hasCheckedStorage.current = true
-
-    const stored = localStorage.getItem(COOKIE_CONSENT_KEY)
-    setShowBanner(!stored)
-  }, [])
-
-  const handleAccept = () => {
-    localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted')
-    setShowBanner(false)
-  }
-
-  const handleEssentialOnly = () => {
-    localStorage.setItem(COOKIE_CONSENT_KEY, 'essential_only')
-    setShowBanner(false)
-  }
-
-  const handleReject = () => {
-    localStorage.setItem(COOKIE_CONSENT_KEY, 'essential_only')
-    setShowBanner(false)
-  }
-
-  if (!showBanner) return null
+  if (hasConsented) return null
 
   return (
     <div
@@ -92,7 +67,7 @@ export default function CookieConsent() {
                       marginLeft: '4px',
                     }}
                   >
-                    Más información
+                    M&aacute;s informaci&oacute;n
                   </button>
                 </p>
               </div>
@@ -105,7 +80,7 @@ export default function CookieConsent() {
                 }}
               >
                 <button
-                  onClick={handleReject}
+                  onClick={acceptEssentialOnly}
                   style={{
                     padding: '10px 20px',
                     background: 'transparent',
@@ -121,7 +96,7 @@ export default function CookieConsent() {
                   Rechazar
                 </button>
                 <button
-                  onClick={handleEssentialOnly}
+                  onClick={acceptEssentialOnly}
                   style={{
                     padding: '10px 20px',
                     background: 'transparent',
@@ -137,7 +112,7 @@ export default function CookieConsent() {
                   Solo Esenciales
                 </button>
                 <button
-                  onClick={handleAccept}
+                  onClick={acceptAll}
                   style={{
                     padding: '10px 20px',
                     background: 'var(--accent)',
@@ -172,7 +147,7 @@ export default function CookieConsent() {
                   color: 'var(--text-primary)',
                 }}
               >
-                Política de Cookies
+                Pol&iacute;tica de Cookies
               </h3>
               <button
                 onClick={() => setShowDetails(false)}
@@ -185,7 +160,7 @@ export default function CookieConsent() {
                   lineHeight: 1,
                 }}
               >
-                ×
+                &times;
               </button>
             </div>
 
@@ -209,7 +184,7 @@ export default function CookieConsent() {
                   🍪 Cookies Esenciales (Necesarias)
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Requeridas para el funcionamiento del sitio. Incluyen sesión de usuario, seguridad y preferencias.
+                  Requeridas para el funcionamiento del sitio. Incluyen sesi&oacute;n de usuario, seguridad y preferencias.
                   <br />
                   <strong>No requieren consentimiento.</strong>
                 </p>
@@ -231,10 +206,10 @@ export default function CookieConsent() {
                     marginBottom: '8px',
                   }}
                 >
-                  📊 Cookies de Análisis
+                  📊 Cookies de An&aacute;lisis
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Nos ayudan a entender cómo los usuarios utilizan el sitio para mejorar la experiencia.
+                  Nos ayudan a entender c&oacute;mo los usuarios utilizan el sitio para mejorar la experiencia.
                   <br />
                   <strong>Requieren consentimiento.</strong>
                 </p>
@@ -258,7 +233,7 @@ export default function CookieConsent() {
                   💬 Cookies del Chatbot
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Utilizadas para mantener la conversación con el asistente de IA.
+                  Utilizadas para mantener la conversaci&oacute;n con el asistente de IA.
                   <br />
                   <strong>Requieren consentimiento.</strong>
                 </p>
@@ -277,7 +252,7 @@ export default function CookieConsent() {
               }}
             >
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Al aceptar, consientes el uso de todas las cookies. Puedes modificar tu elección en cualquier momento.
+                Al aceptar, consientes el uso de todas las cookies. Puedes modificar tu elecci&oacute;n en cualquier momento.
               </p>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <Link
@@ -291,12 +266,12 @@ export default function CookieConsent() {
                     fontSize: '14px',
                     cursor: 'pointer',
                   }}
-                  onClick={() => setShowBanner(false)}
+                  onClick={() => setShowDetails(false)}
                 >
-                  Ver Política de Privacidad
+                  Ver Pol&iacute;tica de Privacidad
                 </Link>
                 <button
-                  onClick={handleAccept}
+                  onClick={acceptAll}
                   style={{
                     padding: '10px 20px',
                     background: 'var(--accent)',

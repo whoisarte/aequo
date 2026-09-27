@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { BillingService } from '@/lib/services/billing';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { rateLimit, getRateLimitKey } from '@/lib/ratelimit';
 
 const checkoutSchema = z.object({
@@ -11,7 +12,8 @@ const checkoutSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+    const forwarded = req.headers.get('x-forwarded-for')?.split(',').pop()?.trim()
+    const ip = forwarded || req.headers.get('x-real-ip') || 'unknown';
     const ratelimit = rateLimit(getRateLimitKey(ip, '/api/billing/checkout'), {
       maxRequests: 10,
       windowMs: 60000,
@@ -53,6 +55,22 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (mode === 'subscription') {
+      const { data: subscription } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .maybeSingle();
+
+      if (!subscription) {
+        return NextResponse.json(
+          { error: 'No active subscription found. Please choose a one-time payment or contact support.' },
+          { status: 403 }
+        );
+      }
     }
 
     const session = await BillingService.createCheckoutSession(

@@ -24,6 +24,20 @@ export default function DashboardLayout({
             {children}
           </Suspense>
         </main>
+        <footer style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 'var(--sidebar-width)',
+          right: 0,
+          padding: '8px 16px',
+          borderTop: '1px solid var(--border)',
+          fontSize: '11px',
+          color: 'var(--text-hint)',
+          textAlign: 'center',
+          background: 'var(--bg-primary)',
+        }}>
+          La informaci&oacute;n proporcionada por este chatbot es solo para fines informativos generales y no constituye asesoramiento legal.
+        </footer>
       </div>
     </AuthProvider>
   )

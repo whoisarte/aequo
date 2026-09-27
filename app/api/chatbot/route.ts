@@ -13,7 +13,8 @@ const chatbotSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+    const forwarded = request.headers.get('x-forwarded-for')?.split(',').pop()?.trim()
+    const ip = forwarded || request.headers.get('x-real-ip') || 'unknown'
     const ratelimit = rateLimit(getRateLimitKey(ip, '/api/chatbot'), {
       maxRequests: 20,
       windowMs: 60000,

@@ -11,39 +11,35 @@ const getStripe = async () => {
 
 const getWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET ?? 'whsec_mock'
 
-async function isEventNew(eventId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('webhook_events')
-      .select('id')
-      .eq('event_id', eventId)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error checking webhook idempotency:', error)
-      return true
-    }
-
-    return !data
-  } catch (err) {
-    console.error('Unexpected error in isEventNew:', err)
-    return true
-  }
-}
-
-async function markEventProcessed(
+async function tryMarkEventProcessed(
   eventId: string,
   eventType: string,
   body: string
-): Promise<void> {
+): Promise<{ inserted: boolean }> {
   try {
-    await supabaseAdmin.from('webhook_events').insert({
-      event_id: eventId,
-      event_type: eventType,
-      body: JSON.parse(body),
-    })
-  } catch (err) {
-    console.error('Error recording webhook event:', err)
+    const { error } = await supabaseAdmin
+      .from('webhook_events')
+      .insert({
+        event_id: eventId,
+        event_type: eventType,
+        body: JSON.parse(body),
+      })
+
+    if (error) {
+      if (error.code === '23505') {
+        return { inserted: false }
+      }
+      console.error('Error recording webhook event:', error)
+      throw error
+    }
+
+    return { inserted: true }
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as { code: string }).code === '23505') {
+      return { inserted: false }
+    }
+    console.error('Unexpected error in tryMarkEventProcessed:', err)
+    throw err
   }
 }
 
@@ -68,137 +64,192 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  const isNew = await isEventNew(event.id)
-  if (!isNew) {
+  const { inserted } = await tryMarkEventProcessed(event.id, event.type, body)
+  if (!inserted) {
     console.log(`Webhook event ${event.id} already processed; skipping`)
     return NextResponse.json({ received: true, duplicate: true })
   }
 
-  if (event.type === 'checkout.session.completed') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const session = event.data.object as any
+  try {
+    if (event.type === 'checkout.session.completed') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const session = event.data.object as any
 
-    console.log('Webhook checkout.session.completed received')
-    console.log('Session Metadata:', session.metadata)
+      console.log('Webhook checkout.session.completed received')
+      console.log('Session Metadata:', session.metadata)
 
-    const userId = session.metadata?.userId
-    const planId = session.metadata?.planId
-    const mode = session.metadata?.mode || 'subscription'
+      const userId = session.metadata?.userId
+      const planId = session.metadata?.planId
+      const mode = session.metadata?.mode || 'subscription'
 
-    if (userId && planId) {
-      if (mode === 'subscription') {
-        console.log(`Searching for existing subscription for user: ${userId}`)
-        const { data: existingSubscription, error: fetchError } = await supabaseAdmin
-          .from('subscriptions')
-          .select('id, status')
-          .eq('user_id', userId)
-          .in('status', ['active', 'trialing'])
-          .maybeSingle()
+      if (userId && planId) {
+        if (mode === 'subscription') {
+          const stripe = await getStripe()
+          const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string)
+          const periodEnd = new Date(stripeSub.current_period_end * 1000).toISOString()
+          const periodStart = new Date(stripeSub.current_period_start * 1000).toISOString()
 
-        console.log('Existing subscription search result:', existingSubscription)
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error fetching existing subscription:', fetchError)
-          return NextResponse.json(
-            { error: 'Failed to check existing subscription' },
-            { status: 500 }
-          )
-        }
-
-        let result
-
-        if (existingSubscription) {
-          console.log(`Updating existing subscription ${existingSubscription.id} to plan ${planId}`)
-          result = await supabaseAdmin
+          console.log(`Searching for existing subscription for user: ${userId}`)
+          const { data: existingSubscription, error: fetchError } = await supabaseAdmin
             .from('subscriptions')
-            .update({
-              plan: planId,
-              status: 'active',
-              stripe_customer_id: session.customer as string,
-              stripe_sub_id: session.subscription as string,
-              current_period_end: new Date().toISOString(),
-            })
-            .eq('id', existingSubscription.id)
-        } else {
-          console.log(`Creating new subscription for user ${userId}`)
-          result = await supabaseAdmin
-            .from('subscriptions')
-            .insert({
-              user_id: userId,
-              plan: planId,
-              status: 'active',
-              stripe_customer_id: session.customer as string,
-              stripe_sub_id: session.subscription as string,
-              current_period_end: new Date().toISOString(),
-            })
-        }
+            .select('id, status, stripe_sub_id')
+            .eq('user_id', userId)
+            .in('status', ['active', 'trialing'])
+            .maybeSingle()
 
-        const { error } = result
+          console.log('Existing subscription search result:', existingSubscription)
 
-        if (error) {
-          console.error('Error updating/creating subscription in Supabase:', error)
-          return NextResponse.json(
-            { error: 'Database update failed' },
-            { status: 500 }
-          )
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            console.error('Error fetching existing subscription:', fetchError)
+            return NextResponse.json(
+              { error: 'Failed to check existing subscription' },
+              { status: 500 }
+            )
+          }
+
+          let result
+
+          if (existingSubscription) {
+            if (existingSubscription.stripe_sub_id && existingSubscription.stripe_sub_id !== session.subscription) {
+              try {
+                await stripe.subscriptions.cancel(existingSubscription.stripe_sub_id as string)
+                console.log(`Canceled old Stripe subscription ${existingSubscription.stripe_sub_id}`)
+              } catch (cancelErr) {
+                console.error('Error canceling old Stripe subscription:', cancelErr)
+              }
+            }
+
+            console.log(`Updating existing subscription ${existingSubscription.id} to plan ${planId}`)
+            result = await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                plan: planId,
+                status: 'active',
+                stripe_customer_id: session.customer as string,
+                stripe_sub_id: session.subscription as string,
+                current_period_start: periodStart,
+                current_period_end: periodEnd,
+              })
+              .eq('id', existingSubscription.id)
+          } else {
+            console.log(`Creating new subscription for user ${userId}`)
+            result = await supabaseAdmin
+              .from('subscriptions')
+              .insert({
+                user_id: userId,
+                plan: planId,
+                status: 'active',
+                stripe_customer_id: session.customer as string,
+                stripe_sub_id: session.subscription as string,
+                current_period_start: periodStart,
+                current_period_end: periodEnd,
+              })
+          }
+
+          const { error } = result
+
+          if (error) {
+            console.error('Error updating/creating subscription in Supabase:', error)
+            return NextResponse.json(
+              { error: 'Database update failed' },
+              { status: 500 }
+            )
+          }
+          console.log('Subscription saved successfully for user:', userId)
+        } else if (mode === 'payment') {
+          console.log(`One-time payment successful for user ${userId}, plan ${planId}`)
         }
-        console.log('Subscription saved successfully for user:', userId)
-      } else if (mode === 'payment') {
-        console.log(`One-time payment successful for user ${userId}, plan ${planId}`)
+      } else {
+        console.error('Missing userId or planId in metadata')
+        return NextResponse.json(
+          { error: 'Missing required metadata' },
+          { status: 400 }
+        )
       }
+    } else if (event.type === 'customer.subscription.deleted') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const subscription = event.data.object as any
+      const stripeSubId = subscription.id
+
+      console.log(`Webhook customer.subscription.deleted received for ${stripeSubId}`)
+
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'canceled' })
+        .eq('stripe_sub_id', stripeSubId)
+
+      if (error) {
+        console.error('Error updating subscription to canceled in Supabase:', error)
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+      }
+      console.log(`Subscription ${stripeSubId} marked as canceled.`)
+
+    } else if (event.type === 'customer.subscription.updated') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const subscription = event.data.object as any
+      const stripeSubId = subscription.id
+      const status = subscription.status
+
+      console.log(`Webhook customer.subscription.updated received for ${stripeSubId} with status ${status}`)
+
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          status: status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        })
+        .eq('stripe_sub_id', stripeSubId)
+
+      if (error) {
+        console.error('Error updating subscription status in Supabase:', error)
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+      }
+      console.log(`Subscription ${stripeSubId} updated to status ${status}.`)
+
+    } else if (event.type === 'charge.refunded') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const charge = event.data.object as any
+      const stripeCustomerId = charge.customer as string
+
+      console.log(`Webhook charge.refunded received for customer ${stripeCustomerId}`)
+
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'canceled' })
+        .eq('stripe_customer_id', stripeCustomerId)
+
+      if (error) {
+        console.error('Error revoking subscription on refund in Supabase:', error)
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+      }
+      console.log(`Subscription for customer ${stripeCustomerId} canceled due to refund.`)
+
+    } else if (event.type === 'invoice.payment_failed') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoice = event.data.object as any
+      const stripeCustomerId = invoice.customer as string
+
+      console.log(`Webhook invoice.payment_failed received for customer ${stripeCustomerId}`)
+
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'past_due' })
+        .eq('stripe_customer_id', stripeCustomerId)
+
+      if (error) {
+        console.error('Error marking subscription as past_due in Supabase:', error)
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+      }
+      console.log(`Subscription for customer ${stripeCustomerId} marked as past_due.`)
+
     } else {
-      console.error('Missing userId or planId in metadata')
-      await markEventProcessed(event.id, event.type, body)
-      return NextResponse.json(
-        { error: 'Missing required metadata' },
-        { status: 400 }
-      )
+      console.log(`Unhandled webhook event type: ${event.type}`)
     }
-  } else if (event.type === 'customer.subscription.deleted') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subscription = event.data.object as any
-    const stripeSubId = subscription.id
 
-    console.log(`Webhook customer.subscription.deleted received for ${stripeSubId}`)
-
-    const { error } = await supabaseAdmin
-      .from('subscriptions')
-      .update({ status: 'canceled' })
-      .eq('stripe_sub_id', stripeSubId)
-
-    if (error) {
-      console.error('Error updating subscription to canceled in Supabase:', error)
-      return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
-    }
-    console.log(`Subscription ${stripeSubId} marked as canceled.`)
-
-  } else if (event.type === 'customer.subscription.updated') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subscription = event.data.object as any
-    const stripeSubId = subscription.id
-    const status = subscription.status
-
-    console.log(`Webhook customer.subscription.updated received for ${stripeSubId} with status ${status}`)
-
-    const { error } = await supabaseAdmin
-      .from('subscriptions')
-      .update({
-        status: status,
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      })
-      .eq('stripe_sub_id', stripeSubId)
-
-    if (error) {
-      console.error('Error updating subscription status in Supabase:', error)
-      return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
-    }
-    console.log(`Subscription ${stripeSubId} updated to status ${status}.`)
-
-  } else {
-    console.log(`Unhandled webhook event type: ${event.type}`)
+    return NextResponse.json({ received: true })
+  } catch (err) {
+    console.error('Error processing webhook event:', err)
+    return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   }
-
-  await markEventProcessed(event.id, event.type, body)
-
-  return NextResponse.json({ received: true })
 }

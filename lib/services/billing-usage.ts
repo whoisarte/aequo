@@ -31,17 +31,23 @@ export async function getSingleGenerationProduct() {
 }
 
 export async function getUserDocumentCount(userId: string): Promise<number> {
-  // 1. Get user's active subscription start date
   const { data: subscription } = await supabaseAdmin
     .from('subscriptions')
-    .select('created_at')
+    .select('current_period_start')
     .eq('user_id', userId)
     .in('status', ['active', 'trialing'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const startDate = subscription?.created_at || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  let startDate: string;
+  if (subscription?.current_period_start) {
+    const periodStart = new Date(subscription.current_period_start);
+    const monthStart = new Date(periodStart.getFullYear(), periodStart.getMonth(), 1);
+    startDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1).toISOString();
+  } else {
+    startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  }
 
   console.log('Counting documents for:', userId, 'since:', startDate);
 
@@ -70,11 +76,6 @@ export async function canGenerateDocument(userId: string) {
 
   if (error || !allSubs || allSubs.length === 0) {
     return { canGenerate: false, reason: 'no_subscription' };
-  }
-
-  if (allSubs.length > 1) {
-    const idsToDelete = allSubs.slice(1).map(s => s.id);
-    await supabaseAdmin.from('subscriptions').delete().in('id', idsToDelete);
   }
 
   const subscription = allSubs[0];

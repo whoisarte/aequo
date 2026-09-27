@@ -33,9 +33,8 @@ let cachedEnv: Environment | null = null
 export function validateEnv(): Environment {
   if (cachedEnv) return cachedEnv
 
-  const isProduction = appMode === 'production'
   const isLocal = appMode === 'local'
-  const schema = isProduction || isLocal ? realEnvSchema : mockEnvSchema
+  const schema = isLocal ? mockEnvSchema : realEnvSchema
 
   try {
     const env = schema.parse({
@@ -57,8 +56,8 @@ export function validateEnv(): Environment {
         .map((err) => `${err.path.join('.')}: ${err.message}`)
         .join('\n')
 
-      const modeHint = isProduction
-        ? '\n\n💡 Production mode requires ALL real credentials. Use NEXT_PUBLIC_APP_MODE=development for local development with mocks.'
+      const modeHint = !isLocal
+        ? '\n\n💡 Non-local mode requires ALL real credentials. Use NEXT_PUBLIC_APP_MODE=local for local development with mocks.'
         : ''
 
       const message = `❌ Environment validation failed:\n${issues}${modeHint}`

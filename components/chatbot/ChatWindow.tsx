@@ -1,26 +1,38 @@
 // components/chatbot/ChatWindow.tsx
 'use client';
 
-import React, { useRef, useEffect, FormEvent } from 'react';
+import React, { useRef, useEffect, FormEvent, useState } from 'react';
 import { useChatStore, ChatMessage } from '@/store/chatStore';
 import { sendMessageToChatbot } from '@/lib/services/chat-service';
-import Button from '@/components/ui/Button'; // Keeping Button for functionality
-import Input from '@/components/ui/Input';   // Keeping Input for functionality
-import Heading from '@/components/ui/Heading'; // Keeping Heading for functionality
-import styles from './chatbot.module.css'; // Import the CSS module
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Heading from '@/components/ui/Heading';
+import styles from './chatbot.module.css';
 
 interface ChatWindowProps {
   onClose: () => void;
 }
 
+const DISCLAIMER_KEY = 'aequo_chat_disclaimer_dismissed';
+
 export function ChatWindow({ onClose }: ChatWindowProps) {
   const { conversationHistory, isLoading, error, addMessage, setLoading, setError, model } = useChatStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
-  console.log('ChatWindow component rendered. Is open:', useChatStore.getState().isChatOpen); // Debug log
+  useEffect(() => {
+    const dismissed = localStorage.getItem(DISCLAIMER_KEY);
+    if (!dismissed) {
+      setShowDisclaimer(true);
+    }
+  }, []);
 
-  // Scroll to the latest message
+  const dismissDisclaimer = () => {
+    localStorage.setItem(DISCLAIMER_KEY, 'true');
+    setShowDisclaimer(false);
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
@@ -77,7 +89,40 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
         </Button>
       </div>
 
-      <div className={`${styles.chatMessageArea} custom-scrollbar`}> {/* Apply message area style */}
+      {showDisclaimer && (
+        <div style={{
+          padding: '8px 12px',
+          background: '#fef3c7',
+          borderBottom: '1px solid #f59e0b',
+          fontSize: '11px',
+          color: '#92400e',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '8px',
+        }}>
+          <div>
+            <strong>Nota legal:</strong> Este chatbot proporciona informaci&oacute;n general sobre derecho laboral mexicano. No constituye asesoramiento legal y no crea una relaci&oacute;n abogado-cliente.
+          </div>
+          <button
+            onClick={dismissDisclaimer}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: '#92400e',
+              padding: '0',
+              lineHeight: '1',
+              flexShrink: 0,
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      <div className={`${styles.chatMessageArea} custom-scrollbar`}>
         {conversationHistory.length === 0 ? (
           <p>Start a conversation!</p>
         ) : (

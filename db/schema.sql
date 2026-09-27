@@ -30,14 +30,15 @@ create table expedientes (
 CREATE INDEX idx_expedientes_user_id ON expedientes(user_id);
 
 create table subscriptions (
-  id                 uuid primary key default gen_random_uuid(),
-  user_id            uuid references auth.users(id) on delete cascade,
-  plan               text default 'free',
-  status             text default 'active',
-  stripe_customer_id text,
-  stripe_sub_id      text,
-  current_period_end timestamptz,
-  created_at         timestamptz default now()
+  id                    uuid primary key default gen_random_uuid(),
+  user_id               uuid references auth.users(id) on delete cascade,
+  plan                  text default 'free',
+  status                text default 'active',
+  stripe_customer_id    text,
+  stripe_sub_id         text,
+  current_period_start  timestamptz,
+  current_period_end    timestamptz,
+  created_at            timestamptz default now()
 );
 
 CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);

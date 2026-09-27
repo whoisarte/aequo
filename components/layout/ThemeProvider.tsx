@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react'
 import { useBrandingStore } from '@/store/brandingStore'
-import { ChatWidget } from '@/components/chatbot/ChatWidget' // Import ChatWidget
+import { ChatWidget } from '@/components/chatbot/ChatWidget'
+import { CookieConsentProvider } from '@/lib/cookie-consent'
+import CookieConsent from '@/components/CookieConsent'
 
 export default function ThemeProvider({
   children,
@@ -20,11 +22,10 @@ export default function ThemeProvider({
       } else if (themeValue === 'light') {
         root.classList.remove('dark')
       } else {
-        // System preference
         const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
           ? 'dark'
           : 'light'
-        
+
         if (systemTheme === 'dark') {
           root.classList.add('dark')
         } else {
@@ -35,20 +36,20 @@ export default function ThemeProvider({
 
     applyTheme(theme)
 
-    // Listener for system changes if 'system' is selected
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       const handleChange = () => applyTheme('system')
-      
+
       mediaQuery.addEventListener('change', handleChange)
       return () => mediaQuery.removeEventListener('change', handleChange)
     }
   }, [theme])
 
   return (
-    <>
+    <CookieConsentProvider>
       {children}
-      <ChatWidget /> {/* Render ChatWidget here */}
-    </>
+      <CookieConsent />
+      <ChatWidget />
+    </CookieConsentProvider>
   )
 }

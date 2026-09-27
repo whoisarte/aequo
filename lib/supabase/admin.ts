@@ -1,3 +1,4 @@
+import 'server-only'
 import { container } from '@/lib/di'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
