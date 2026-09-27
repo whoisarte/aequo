@@ -1,21 +1,32 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { PlanType } from '@/lib/constants/billing';
 
-export async function checkUserSubscription(userId: string): Promise<boolean> {
+type SubscriptionRow = {
+  id: string;
+  plan: string;
+  status: string;
+  current_period_end: string | null;
+  created_at: string;
+};
+
+export async function getActiveSubscription(userId: string): Promise<SubscriptionRow | null> {
   const { data, error } = await supabaseAdmin
     .from('subscriptions')
-    .select('status, current_period_end')
+    .select('id, plan, status, current_period_end, created_at')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
+    .order('created_at', { ascending: false })
     .maybeSingle();
 
-  if (error || !data) return false;
+  if (error || !data) return null;
+  if (data.current_period_end && new Date(data.current_period_end) < new Date()) return null;
 
-  if (data.current_period_end && new Date(data.current_period_end) < new Date()) {
-    return false;
-  }
+  return data as SubscriptionRow;
+}
 
-  return true;
+export async function checkUserSubscription(userId: string): Promise<boolean> {
+  const sub = await getActiveSubscription(userId);
+  return sub !== null;
 }
 
 export async function getSingleGenerationProduct() {
@@ -67,18 +78,11 @@ export async function getUserDocumentCount(userId: string): Promise<number> {
 }
 
 export async function canGenerateDocument(userId: string) {
-  const { data: allSubs, error } = await supabaseAdmin
-    .from('subscriptions')
-    .select('id, plan, status, created_at')
-    .eq('user_id', userId)
-    .in('status', ['active', 'trialing'])
-    .order('created_at', { ascending: false });
+  const subscription = await getActiveSubscription(userId);
 
-  if (error || !allSubs || allSubs.length === 0) {
+  if (!subscription) {
     return { canGenerate: false, reason: 'no_subscription' };
   }
-
-  const subscription = allSubs[0];
 
   const { data: product } = await supabaseAdmin
     .from('products')

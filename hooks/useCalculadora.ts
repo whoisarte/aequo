@@ -3,7 +3,8 @@ import type { DatosEmpleado, ResultadoCalculo, PeriodoAnual, TipoDocumento } fro
 import { calcularFiniquito } from '@/lib/calculos/finiquito'
 import { calcularLiquidacion } from '@/lib/calculos/liquidacion'
 import { validarDatos, type ErroresValidacion } from '@/lib/calculos/validators'
-import { useBrandingStore } from '@/store/brandingStore' // Add this import
+import { useBrandingStore } from '@/store/brandingStore'
+import { useToast } from '@/lib/toast/index'
 
 const datosIniciales: DatosEmpleado = {
   nombreEmpleado: '',
@@ -16,8 +17,9 @@ const datosIniciales: DatosEmpleado = {
 }
 
 export function useCalculadora(porcentajeConciliacion: number = 50) {
-  const { branding } = useBrandingStore() // Access branding store
+  const { branding } = useBrandingStore()
   const [datos, setDatos] = useState<DatosEmpleado>(datosIniciales)
+  const toast = useToast()
   const [resultado, setResultado] = useState<ResultadoCalculo | null>(null)
   const [errores, setErrores] = useState<ErroresValidacion>({})
 
@@ -95,27 +97,39 @@ export function useCalculadora(porcentajeConciliacion: number = 50) {
     const aniosServicio = Math.floor(diasLaborados / 365)
 
     // --- Fetch SMG for liquidacion calculation ---
-    let SMG_value = 0; // Default to 0 or handle as error
+    let SMG_value: number | null = null;
     if (datos.fechaSalida) {
       const yearSalida = new Date(datos.fechaSalida).getFullYear();
-      try {
-        const response = await fetch(`/api/minimum-wage?year=${yearSalida}&zone=${branding.zonaSalarial || 'general'}`); // Use stored zonaSalarial
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch minimum wage');
+      const zone = branding.zonaSalarial || 'general';
+      let fetchError: string | null = null;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await fetch(`/api/minimum-wage?year=${yearSalida}&zone=${zone}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch minimum wage');
+          }
+          const data = await response.json();
+          SMG_value = data.smg;
+          break;
+        } catch (error) {
+          fetchError = error instanceof Error ? error.message : 'Error al obtener el salario mínimo';
+          if (attempt === 1) {
+            console.warn(`[useCalculadora] SMG fetch attempt ${attempt} failed, retrying:`, error);
+          }
         }
-        const data = await response.json();
-        SMG_value = data.smg;
-      } catch (error) {
-        console.error("Error fetching minimum wage:", error);
-        // Optionally, set an error state or toast notification
-        // For now, proceed with SMG_value = 0 (or a sensible fallback)
+      }
+
+      if (SMG_value === null) {
+        toast.error(`No se pudo obtener el salario mínimo (${yearSalida}, zona ${zone}): ${fetchError}`);
+        return;
       }
     }
     // --- End Fetch SMG ---
 
     const finiquito = calcularFiniquito(datos, porcentajeConciliacion)
-    const liquidacion = calcularLiquidacion(datos, porcentajeConciliacion, SMG_value) // Pass SMG_value
+    const liquidacion = calcularLiquidacion(datos, porcentajeConciliacion, SMG_value ?? 0) // SMG_value is non-null here due to early return above
 
     setResultado({
       finiquito,

@@ -8,6 +8,7 @@ create table profiles (
   logo_url                 text,
   color_primario           text,
   porcentaje_conciliacion  integer default 50,
+  zona_salarial           text default 'general',
   color_secundario         text,
   fuente                   text default 'helvetica',
   created_at               timestamptz default now()
@@ -172,3 +173,20 @@ CREATE POLICY "Users can CRUD own calendar events" ON public.calendar_events
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE INDEX idx_calendar_events_user_id ON public.calendar_events(user_id);
+
+-- Tabla para compras individuales (one-time payments)
+CREATE TABLE public.purchases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id),
+  stripe_session_id text NOT NULL UNIQUE,
+  stripe_payment_intent text,
+  amount_cents integer NOT NULL,
+  currency text NOT NULL DEFAULT 'mxn',
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own purchases" ON public.purchases
+  FOR SELECT USING (auth.uid() = user_id);

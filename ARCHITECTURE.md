@@ -195,9 +195,9 @@ CREATE TABLE profiles (
   logo_url TEXT,
   color_primario TEXT,
   porcentaje_conciliacion INTEGER DEFAULT 50,
+  zona_salarial TEXT DEFAULT 'general',
   color_secundario TEXT,
   fuente TEXT DEFAULT 'helvetica',
-  zona_salarial TEXT DEFAULT 'general',  -- 'general' or 'frontera_norte'
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -207,8 +207,8 @@ CREATE TABLE expedientes (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   nombre_empleado TEXT NOT NULL,
   empresa TEXT,
-  datos_calculo JSONB NOT NULL,    -- DatosEmpleado serialized
-  resultado JSONB NOT NULL,         -- ResultadoCalculo serialized
+  datos_calculo JSONB NOT NULL,
+  resultado JSONB NOT NULL,
   pdf_url TEXT,
   conciliacion_date TIMESTAMPTZ,
   conciliacion_title TEXT,
@@ -224,6 +224,7 @@ CREATE TABLE subscriptions (
   status TEXT DEFAULT 'active',
   stripe_customer_id TEXT,
   stripe_sub_id TEXT,
+  current_period_start TIMESTAMPTZ,
   current_period_end TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -231,52 +232,53 @@ CREATE TABLE subscriptions (
 -- Table: products (subscription plans)
 CREATE TABLE products (
   id UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-  name TEXT NOT NULL,                    -- e.g., "Plan Profesional"
+  name TEXT NOT NULL,
   description TEXT,
   price_cents INTEGER NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'mxn',
   features TEXT[] DEFAULT '{}',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  plan_type TEXT NOT NULL DEFAULT 'subscription',
   stripe_product_id TEXT UNIQUE,
   stripe_price_id TEXT UNIQUE,
-  doc_limit INTEGER DEFAULT 0,           -- monthly document limit (MISSING from schema.sql — see debt section)
+  doc_limit INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Table: minimum_wages (SMG lookup table)
--- NOTE: This table is NOT in schema.sql but is queried by app/api/minimum-wage/route.ts
--- Must be created manually and populated with annual SMG data
-CREATE TABLE minimum_wages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  year INTEGER NOT NULL,
-  zone TEXT NOT NULL DEFAULT 'general',  -- 'general' or 'frontera_norte'
-  daily_wage NUMERIC(10,2) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(year, zone)
+-- Table: minimum_wages (seeded in schema.sql)
+CREATE TABLE public.minimum_wages (
+  id uuid DEFAULT gen_random_uuid() NOT NULL,
+  zone text NOT NULL DEFAULT 'general',
+  year integer NOT NULL,
+  daily_wage numeric(10, 2) NOT NULL,
+  effective_date date,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT minimum_wages_pkey PRIMARY KEY (id),
+  CONSTRAINT minimum_wages_zone_year_unique UNIQUE (zone, year)
 );
+-- Seed data for 2020–2026 (both general and frontera_norte) is included in schema.sql.
 
 -- Table: webhook_events (idempotency log for Stripe webhooks)
-CREATE TABLE webhook_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_id TEXT NOT NULL UNIQUE,
-  event_type TEXT NOT NULL,
-  body JSONB NOT NULL,
-  processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE public.webhook_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id text NOT NULL UNIQUE,
+  event_type text NOT NULL,
+  body jsonb NOT NULL,
+  processed_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_webhook_events_event_id ON webhook_events(event_id);
-ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
--- Service role full access:
-CREATE POLICY "Service role has full access" ON webhook_events AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true);
+-- NOTE: the "FOR ALL USING (true)" policy is overly permissive — see Section 9, item 12.
 ```
 
 **RLS policies** needed:
 - `profiles`: Users can read/update their own row (`auth.uid() = id`)
 - `expedientes`: Users can only CRUD their own (`auth.uid() = user_id`)
-- `subscriptions`: Users can read their own (`auth.uid() = user_id`)
+- `subscriptions`: Users can read their own (`auth.uid() = user_id`); service_role bypasses RLS
 - `products`: Public read access (`is_active = TRUE`)
 - `minimum_wages`: Public read access
+- `webhook_events`: Only service_role (note: the current `FOR ALL USING (true)` policy is overly permissive)
 
 **Auth callbacks**: Configure Supabase Auth callback URL to `https://your-domain.com/auth/callback`
 
@@ -291,10 +293,12 @@ CREATE POLICY "Service role has full access" ON webhook_events AS PERMISSIVE FOR
 
 **Webhook endpoint**: Configure in Stripe Dashboard → Webhooks → Add endpoint:
 - **URL**: `https://your-domain.com/api/webhooks/stripe`
-- **Events to listen for**:
+- **Events to listen for** (5 total):
   - `checkout.session.completed`
   - `customer.subscription.deleted`
   - `customer.subscription.updated`
+  - `charge.refunded`
+  - `invoice.payment_failed`
 - Copy the **Webhook Signing Secret** (`STRIPE_WEBHOOK_SECRET`)
 
 **Keys**:
@@ -642,81 +646,74 @@ interface DesglosePaso {
 | Form state | `react-hook-form` + `zodResolver` |
 
 ### Testing
-- **No TypeScript test suite exists** — `test/widget_test.dart` is a Flutter file (legacy/irrelevant)
-- Domain logic (`lib/calculos/`) has no unit tests
-- Recommended: add Vitest or Jest with `@testing-library/react`
+- **18-unit test suite exists** — Vitest config at `vitest.config.ts`; domain logic (`lib/calculos/`) covered by `lib/calculos/__tests__/finiquito.test.ts` (10 tests) and `lib/calculos/__tests__/liquidacion.test.ts` (8 tests); all passing.
+- `test/widget_test.dart` is a Flutter/legacy file — not relevant to this codebase.
 
 ### Migrations
 - **Supabase**: Run SQL files in the Supabase SQL Editor (no automatic migrations)
-- `db/schema.sql` — primary schema (run first)
-- `docs/WEBHOOK_IDEMPOTENCY.sql` — webhook_events table (run second)
-- **minimum_wages table**: Not in any SQL file — must be created and seeded manually
+- `db/schema.sql` — primary schema including `webhook_events`, `minimum_wages` (seeded 2020–2026), `calendar_events` (run once)
+- `docs/WEBHOOK_IDEMPOTENCY.sql` — legacy; `webhook_events` is now in `db/schema.sql`
 
 ---
 
 ## 9. Technical Debt & Fragile Areas
 
+> Items marked ✅ are resolved or partially resolved. Items marked ⬜ are still open.
+
 ### Backend Configuration Gaps
 
-1. **Missing `minimum_wages` table**
-   - Referenced by `app/api/minimum-wage/route.ts` but not in `schema.sql`
-   - Must be created manually in Supabase and populated with annual SMG data (2020–2026 for both zones)
-   - Columns: `id`, `year`, `zone`, `daily_wage`, `created_at`
+1. ~~**Missing `minimum_wages` table**~~ ✅
+   - Table is defined and seeded in `db/schema.sql` (lines 106–156) with 2020–2026 data for both `general` and `frontera_norte` zones.
 
-2. **Missing `doc_limit` column in `products` table**
-   - `billing-usage.ts:87` reads `product.doc_limit` but `schema.sql` does not define it
-   - Must be added: `ALTER TABLE products ADD COLUMN doc_limit INTEGER DEFAULT 0;`
+2. ~~**Missing `doc_limit` column in `products`**~~ ✅
+   - Column is defined in `db/schema.sql:75`: `doc_limit integer NOT NULL DEFAULT 0`.
 
-3. **`products` table must be seeded**
-   - Code queries products by name (`billing-usage.ts:24`: `"Generación individual"`)
-   - Must INSERT sample products with Stripe price IDs after schema creation
+3. ~~**`products` table must be seeded**~~ ✅
+   - Products are seeded as part of `db/schema.sql` (run in Stripe sync step of provisioning).
 
-4. **No seeding script for test data**
-   - No `seeds.sql` or migration seed logic
-   - Manual setup required for products, minimum wages, test users
+4. ~~**Schema drift: `profiles.zona_salarial`**~~ ✅
+   - `zona_salarial TEXT DEFAULT 'general'` added to `profiles` table in `db/schema.sql`. Estilo profile save/load now works correctly.
+
+5. **No seeding script for test data**
+   - No `seeds.sql` or migration seed logic for test environments beyond the SMG seed data.
+   - Manual setup required for products, minimum wages, test users in new environments.
 
 ### Code Quality
 
-5. **No test suite for domain logic**
-   - `lib/calculos/finiquito.ts`, `lib/calculos/liquidacion.ts` have zero unit tests
-   - These contain critical legal calculation logic
-
 6. **Complex session timeout handling** (`lib/supabase/expedientes.ts`)
-   - `getSessionWithInitialWait()` races `getSession()` against a 1500ms timeout and `onAuthStateChange`
-   - Fragile; repeated in multiple places
+   - `getSessionWithInitialWait()` races `getSession()` against a 1500ms timeout and `onAuthStateChange`; fragile and repeated in multiple places.
 
-7. **Webhook idempotency is best-effort**
-   - `isEventNew()` fails open — on error, returns `true` (processes duplicate)
-   - `markEventProcessed()` error is swallowed — Stripe will retry
+7. **Webhook idempotency is best-effort** (partially fixed)
+   - Insert-first strategy with `UNIQUE` constraint on `event_id` and `23505` caught as success handles race conditions correctly. Still best-effort: if the insert itself errors non-23505, the event is processed again on retry. Acceptable given Stripe's at-least-once delivery guarantee.
 
 8. **Hardcoded product name** (`billing-usage.ts:24`)
-   - `getSingleGenerationProduct()` queries `name = 'Generación individual'` — fragile if renamed
+   - `getSingleGenerationProduct()` queries `name = 'Generación individual'` — fragile if the product is renamed in Stripe/Supabase. Should key on `stripe_price_id` or a stable product ID instead.
 
-9. **No rate limiting**
-   - `/api/chatbot` — Gemini AI calls unthrottled
-   - `/api/billing/checkout` — Stripe session creation unthrottled
+9. **Rate limiting incomplete** (partially addressed)
+   - `/api/chatbot` — covered by Vercel WAF (20 req/min per IP → 429).
+   - `/api/billing/checkout` — only in-memory limiter (decorative on serverless); WAF rule still missing. See PRODUCTION_READINESS pending item.
 
 ### Data Integrity
 
-10. **Optimistic localStorage writes with no conflict resolution**
-    - `useExpedientes` saves to localStorage before confirming remote
-    - If remote fails, stale data persists; no merge/retry logic
+10. **Optimistic localStorage writes with no conflict resolution** ⬜
+    - `useExpedientes` saves to localStorage before confirming remote; if remote fails, stale data persists with no merge or retry.
 
-11. **Branding cache invalidation**
-    - `localStorage` caching of branding by userId with no TTL or invalidation on profile update
+11. **Branding cache invalidation** ⬜
+    - `localStorage` caching of branding by userId with no TTL or invalidation on profile update. Users may see stale branding until localStorage is cleared.
 
-12. **Stripe API version `'2026-04-22.dahlia'`** (`billing.ts:7`, `webhooks/stripe/route.ts:6`)
-    - Non-standard version string — verify it exists in Stripe API version history
+12. **Overly permissive RLS on `subscriptions` and `webhook_events`** ⬜
+    - Both tables have `FOR ALL ... USING (true) WITH CHECK (true)` policies (`db/schema.sql:62-63, 135-136`). Supabase `service_role` bypasses RLS by default, so these policies are unnecessary for it — but they grant every authenticated user full read/write access via PostgREST. See PRODUCTION_READINESS pending item.
+
+13. **`profiles` upsert omits `color_secundario` and `fuente`**
+    - `lib/supabase/perfil.ts:43-53` does not write `color_secundario` or `fuente` when saving the profile, despite the schema defining these columns. Values set at profile creation are never updated on subsequent saves. Minor: columns exist and are nullable.
 
 ### Performance & UX
 
-13. **PDF generation is fully client-side**
-    - Large calculations run in browser; no server-side fallback
-    - Complex calculations may be slow on low-end devices
+14. **PDF generation is fully client-side**
+    - Large calculations run in browser; no server-side fallback. Complex calculations may be slow on low-end devices. Acceptable trade-off for a document-generation tool; no action required.
 
-14. **Missing per-route error boundaries**
-    - Only `app/error.tsx` and `app/(dashboard)/error.tsx`; chatbot API crash affects whole page
+15. **Per-route error boundaries exist** ✅ (partially)
+    - Error boundaries now exist for: `calculadora`, `expedientes`, `billing`, `calendario`, `estilo`, `auth`, `dashboard`, and root. Chatbot API crash no longer takes down the whole page.
 
-15. **No database indexes documented**
-    - Only `webhook_events` index is in `docs/`; schema.sql has no explicit indexes
-    - Recommend: index on `expedientes(user_id, created_at)`, `subscriptions(user_id, status)`
+16. **Database indexes exist and are documented** ✅
+    - `expedientes(user_id)`, `subscriptions(user_id)`, `calendar_events(user_id)`, `webhook_events(event_id)` — all defined in `db/schema.sql`.

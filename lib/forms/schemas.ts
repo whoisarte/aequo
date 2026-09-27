@@ -19,6 +19,13 @@ export const registerSchema = z.object({
 
 export type RegisterFormData = z.infer<typeof registerSchema>
 
+export const checkoutSchema = z.object({
+  planId: z.string().min(1, 'El ID del plan es requerido'),
+  mode: z.enum(['subscription', 'payment']).optional().default('subscription'),
+})
+
+export type CheckoutFormData = z.infer<typeof checkoutSchema>
+
 export const perfilSchema = z.object({
   nombreEmpresa: z.string().min(1, 'El nombre de la empresa es requerido'),
   colorPrimario: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color inválido'),

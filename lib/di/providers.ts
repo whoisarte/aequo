@@ -5,6 +5,7 @@ import {
   HarmCategory,
 } from '@google/generative-ai'
 import type { StripeServiceInterface, MinimumWageServiceInterface, ChatbotServiceInterface } from './types'
+import { STRIPE_API_VERSION } from '@/lib/constants/billing'
 
 let stripeInstance: Stripe | null = null
 
@@ -12,7 +13,7 @@ export const getStripeInstance = (): Stripe => {
   if (!stripeInstance) {
     stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
       // @ts-ignore Stripe types out of sync with runtime
-      apiVersion: '2026-08-26.dahlia',
+      apiVersion: STRIPE_API_VERSION,
     })
   }
   return stripeInstance

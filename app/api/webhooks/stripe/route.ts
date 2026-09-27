@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { STRIPE_API_VERSION } from '@/lib/constants/billing'
 
 const getStripe = async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const StripeModule = (await import('stripe')) as any
   return new StripeModule.default(process.env.STRIPE_SECRET_KEY ?? 'sk_test_mock', {
-    apiVersion: '2026-08-26.dahlia',
+    apiVersion: STRIPE_API_VERSION,
   })
 }
 
@@ -158,6 +159,24 @@ export async function POST(req: NextRequest) {
           console.log('Subscription saved successfully for user:', userId)
         } else if (mode === 'payment') {
           console.log(`One-time payment successful for user ${userId}, plan ${planId}`)
+
+          const { error: purchaseError } = await supabaseAdmin
+            .from('purchases')
+            .insert({
+              user_id: userId,
+              product_id: planId,
+              stripe_session_id: session.id as string,
+              stripe_payment_intent: session.payment_intent as string,
+              amount_cents: session.amount_total as number,
+              currency: session.currency as string,
+            })
+
+          if (purchaseError) {
+            console.error('Error recording one-time purchase:', purchaseError)
+            return NextResponse.json({ error: 'Purchase record failed' }, { status: 500 })
+          }
+
+          console.log(`One-time purchase recorded for user ${userId}`)
         }
       } else {
         console.error('Missing userId or planId in metadata')
@@ -213,6 +232,31 @@ export async function POST(req: NextRequest) {
       const stripeCustomerId = charge.customer as string
 
       console.log(`Webhook charge.refunded received for customer ${stripeCustomerId}`)
+
+      const stripe = await getStripe()
+
+      // Resolve the refunded charge back to its checkout session to check the mode.
+      // Only cancel the subscription if this charge belonged to a subscription checkout,
+      // not a one-time $50 generation purchase.
+      if (charge.payment_intent) {
+        try {
+          const session = await stripe.checkout.sessions.list({
+            customer: stripeCustomerId,
+            limit: 1,
+          })
+          const latestSession = session.data.find(
+            (s: any) => s.payment_intent === charge.payment_intent || s.id === charge.id
+          )
+          if (latestSession?.metadata?.mode === 'payment') {
+            console.log(
+              `Refund on one-time payment (mode=payment) for customer ${stripeCustomerId} — skipping subscription cancellation.`
+            )
+            return NextResponse.json({ received: true })
+          }
+        } catch (listErr) {
+          console.warn('Could not list checkout sessions to determine mode, proceeding with cancellation:', listErr)
+        }
+      }
 
       const { error } = await supabaseAdmin
         .from('subscriptions')

@@ -2,60 +2,120 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useBrandingStore } from '@/store/brandingStore';
 import { descargarPDF } from '@/lib/pdf/generator';
 
 export default function DownloadContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const { branding } = useBrandingStore();
   const [data, setData] = useState<{ datos: any; resultado: any } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('aequo_calculo_temporal');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setData(parsed);
+    if (!saved) {
       setLoading(false);
-
-      if (sessionId) {
-        void descargarPDF(parsed, `aequo-${parsed.datos.nombreEmpleado || 'calculo'}`);
-      }
+      setError(true);
+      return;
     }
+
+    const parsed = JSON.parse(saved);
+    setData(parsed);
+
+    if (!sessionId) {
+      setLoading(false);
+      return;
+    }
+
+    fetch(`/api/purchases/verify?session_id=${encodeURIComponent(sessionId)}`)
+      .then(res => res.json())
+      .then(result => {
+        if (result.valid) {
+          setVerified(true);
+          void descargarPDF(parsed, `aequo-${parsed.datos.nombreEmpleado || 'calculo'}`);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(() => {
+        setError(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [sessionId]);
 
+  const spinnerStyle = {
+    width: '20px',
+    height: '20px',
+    border: '3px solid var(--border)',
+    borderTopColor: 'var(--color-primary)',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  };
+
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    background: 'var(--bg-base)',
+    textAlign: 'center' as const,
+    padding: '16px',
+  };
+
+  if (loading) {
+    return (
+      <div style={containerStyle}>
+        <div style={spinnerStyle} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '16px' }}>
+          Preparando tu documento...
+        </h1>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={containerStyle}>
+        <svg style={{ width: '20px', height: '20px', color: 'var(--color-error)', marginBottom: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-error)', marginBottom: '16px' }}>
+          No se encontró tu compra
+        </h1>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          Si crees que esto es un error, contacta a soporte.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-center p-4">
-      {loading ? (
-        <>
-           <svg className="w-5 h-5 animate-spin text-blue-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v4m0 0l-2-2m2 2l2-2m-2 4v4m0 0l-2-2m2 2l2-2m-8 2h16M4 12h16" />
-          </svg>
-          <h1 className="text-2xl font-bold text-gray-700 mb-4">Preparando tu documento...</h1>
-        </>
-      ) : (
-        <>
-          <svg className="w-5 h-5 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <h1 className="text-2xl font-bold text-green-600 mb-4">¡Pago exitoso!</h1>
-          <p className="text-gray-700">Tu descarga ha comenzado.</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Si la descarga no comenzó,{' '}
-            <button 
-              onClick={async () => {
-                if (data) {
-                  await descargarPDF(data, `aequo-${data.datos.nombreEmpleado || 'calculo'}`);
-                }
-              }} 
-              className="text-blue-600 underline"
-            >
-              haz clic aquí para descargar
-            </button>.
-          </p>
-        </>
-      )}
+    <div style={containerStyle}>
+      <svg style={{ width: '20px', height: '20px', color: 'var(--color-success)', marginBottom: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-success)', marginBottom: '16px' }}>
+        ¡Pago exitoso!
+      </h1>
+      <p style={{ color: 'var(--text-primary)' }}>Tu descarga ha comenzado.</p>
+      <p style={{ fontSize: '14px', color: 'var(--text-hint)', marginTop: '8px' }}>
+        Si la descarga no comenzó,{' '}
+        <button
+          onClick={async () => {
+            if (data) {
+              await descargarPDF(data, `aequo-${data.datos.nombreEmpleado || 'calculo'}`);
+            }
+          }}
+          style={{ color: 'var(--color-primary)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+        >
+          haz clic aquí para descargar
+        </button>.
+      </p>
     </div>
   );
 }

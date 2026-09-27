@@ -12,9 +12,11 @@ import Heading from '@/components/ui/Heading'
 import PaywallModal from '@/components/ui/PaywallModal'
 import { compartirWhatsApp, compartirCorreo } from '@/lib/share'
 import { getSubscriptionStatus, getSingleGenerationDetails, checkAccess } from '@/lib/services/billing-actions'
+import { useToast } from '@/lib/toast/index'
 
 export default function CalculadoraPage() {
   const { branding } = useBrandingStore()
+  const toast = useToast()
   const resultadosRef = useRef<HTMLDivElement>(null)
   const [showPaywall, setShowPaywall] = useState(false)
   const [singleProduct, setSingleProduct] = useState<{ id: string; price_cents: number } | null>(null)
@@ -162,7 +164,7 @@ export default function CalculadoraPage() {
     } catch (error) {
       console.error('Payment error:', error);
       const message = error instanceof Error ? error.message : 'Error al procesar el pago';
-      // You might want to use toast here if available
+      toast.error(message);
     }
   }
 
@@ -239,8 +241,14 @@ export default function CalculadoraPage() {
               <TablaComparativa resultado={resultado} summaryOnly={true} />
             </>
           ) : (
-            <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center mt-6">
-              <p className="text-gray-600 mb-4">
+            <div style={{
+              padding: '32px',
+              border: '2px dashed var(--border)',
+              borderRadius: '12px',
+              textAlign: 'center',
+              marginTop: '24px',
+            }}>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
                 Tu liquidación estimada es de {fmt(resultado.finiquito.total + resultado.liquidacion.total)}. El desglose detallado está oculto. Realiza un pago único o suscríbete para verlo.
               </p>
               <Button onClick={handlePaymentClick}>Desbloquear resumen detallado ($50 MXN)</Button>

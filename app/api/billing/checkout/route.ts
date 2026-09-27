@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { BillingService } from '@/lib/services/billing';
 import { createClient } from '@/lib/supabase/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
 import { rateLimit, getRateLimitKey } from '@/lib/ratelimit';
-
-const checkoutSchema = z.object({
-  planId: z.string().min(1, 'El ID del plan es requerido'),
-  mode: z.enum(['subscription', 'payment']).optional().default('subscription'),
-})
+import { checkoutSchema } from '@/lib/forms/schemas';
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,22 +49,6 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (mode === 'subscription') {
-      const { data: subscription } = await supabaseAdmin
-        .from('subscriptions')
-        .select('status')
-        .eq('user_id', user.id)
-        .in('status', ['active', 'trialing'])
-        .maybeSingle();
-
-      if (!subscription) {
-        return NextResponse.json(
-          { error: 'No active subscription found. Please choose a one-time payment or contact support.' },
-          { status: 403 }
-        );
-      }
     }
 
     const session = await BillingService.createCheckoutSession(

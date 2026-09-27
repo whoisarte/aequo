@@ -52,47 +52,113 @@ export default function PaywallModal({ isOpen, onClose, singleProduct }: Paywall
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 1001,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px',
+    }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+        }}
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-in fade-in zoom-in duration-200">
-        <div className="mb-6">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div style={{
+        position: 'relative',
+        background: 'var(--bg-card)',
+        borderRadius: '16px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        maxWidth: '448px',
+        width: '100%',
+        padding: '32px',
+        textAlign: 'center',
+      }}>
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: 'var(--color-primary-light)',
+            color: 'var(--color-primary)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}>
+            <svg style={{ width: '32px', height: '32px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Acceso Requerido</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: '8px',
+          }}>Acceso Requerido</h2>
+          <p style={{
+            color: 'var(--text-secondary)',
+            marginTop: '8px',
+          }}>
             Para descargar o guardar este reporte, necesitas una suscripción activa o adquirir un acceso individual.
           </p>
         </div>
 
-        <div className="space-y-4">
-          {/* Opción 1: Suscripción */}
-          <a 
-            href="/billing" 
-            className="block w-full py-3 px-6 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <a
+            href="/billing"
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '12px 24px',
+              background: 'var(--color-primary)',
+              color: '#fff',
+              fontWeight: 700,
+              borderRadius: '12px',
+              transition: 'background 0.2s',
+              textDecoration: 'none',
+            }}
           >
             Ver Planes de Membresía
           </a>
 
-          {/* Opción 2: Pago Único */}
           {singleProduct && (
             <button
               onClick={handlePaymentClick}
               disabled={isLoading}
-              className="w-full py-3 px-6 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                border: '2px solid var(--border)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                borderRadius: '12px',
+                background: isLoading ? 'var(--bg-surface)' : 'transparent',
+                opacity: isLoading ? 0.5 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s, opacity 0.2s',
+              }}
             >
               {isLoading ? 'Procesando...' : `Pagar Generación Individual ($${(singleProduct.price_cents / 100).toFixed(0)} MXN)`}
             </button>
           )}
 
-          <button 
+          <button
             onClick={onClose}
-            className="text-sm text-gray-400 hover:text-gray-600 transition"
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-hint)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.2s',
+            }}
           >
             Cancelar
           </button>

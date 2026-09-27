@@ -39,7 +39,6 @@ export async function getPricingPlans(): Promise<PricingPlan[]> {
 }
 
 export async function getUserSubscription(userId: string) {
-  // Ensure we only keep the newest subscription and delete others
   const { data: allSubs, error: fetchError } = await supabaseAdmin
     .from('subscriptions')
     .select('id, plan, status, current_period_end, created_at')
@@ -48,12 +47,6 @@ export async function getUserSubscription(userId: string) {
     .order('created_at', { ascending: false });
 
   if (fetchError || !allSubs || allSubs.length === 0) return null;
-
-  // Cleanup: Delete duplicates
-  if (allSubs.length > 1) {
-    const idsToDelete = allSubs.slice(1).map(s => s.id);
-    await supabaseAdmin.from('subscriptions').delete().in('id', idsToDelete);
-  }
 
   return allSubs[0];
 }
