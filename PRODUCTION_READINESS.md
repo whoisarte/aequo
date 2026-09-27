@@ -1,6 +1,6 @@
 # Production Readiness — Status
 
-> **Status**: Dev payment flow verified and working. Ready to test production flow.
+> **Status**: 14 production-readiness items completed. Ready for dev testing and production smoke test.
 
 ---
 
@@ -179,11 +179,6 @@ These exist in the codebase but are not blocking:
 | ✅ | Gemini API key configured in Vercel | Chatbot can call Gemini | Same API key set for both environments in Vercel | — |
 | ✅ | Dev payment flow tested and working | Checkout works end-to-end in Stripe test mode | Verified redirect to Stripe + test card `4242 4242 4242 4242`. **Limitation**: only the checkout redirect was verified — one-time fulfillment is not yet server-verified (tracked below) | — |
 | ✅ | Calendar events persist to Supabase | Calendar data survives reloads and sessions | `calendar_events` table + server actions for CRUD; generic events persist on create/update/delete | — |
-
-### ⬜ Pending
-
-| Status | Item | Description | How to fix | Updated date |
-|--------|------|-------------|------------|--------------|
 | ✅ | Stripe dunning enabled | Failed renewals are not retried and the customer is not emailed by Stripe | Enable Smart Retries, customer retries emails, and expiring card emails in Stripe dunning settings (Dashboard, no code) | 2026-09-26 |
 | ✅ | Rate-limit IP spoofing fix | Limiter is keyed on the left-most `x-forwarded-for` entry, which is attacker-controlled | Use the right-most XFF entry or `x-real-ip`; key authenticated routes on `user.id` instead of IP | 2026-09-26 (code fixed) |
 | ✅ | Mode-gated Stripe env validation | Missing Stripe keys in prod silently fall back to mock values and fail weirdly | Changed `lib/env.ts` condition from `isProduction || isLocal` to `isLocal ? mockEnvSchema : realEnvSchema` — mock fallbacks now only in `local` mode | 2026-09-26 |
@@ -198,6 +193,11 @@ These exist in the codebase but are not blocking:
 | ✅ | Remove delete side effect from `canGenerateDocument()` | A read path (`billing-usage.ts`) deletes extra subscription rows as a side effect | Removed delete logic from `canGenerateDocument()` in `billing-usage.ts` — it's now purely read-only; single-active-subscription enforcement already handled at write time by the `checkout.session.completed` webhook (updates existing instead of creating duplicates) | 2026-09-26 |
 | ✅ | Fix upgrade double-billing | Buying a new plan creates a NEW Stripe subscription; the old one keeps billing forever, silently | When `checkout.session.completed` finds an existing active subscription, the old Stripe subscription is now canceled via `stripe.subscriptions.cancel()` before updating the DB record with the new subscription | 2026-09-26 |
 | ✅ | Fix quota reset window | Usage is counted since subscription `created_at` — monthly quotas never actually reset on renewal | Added `current_period_start` column to subscriptions schema; both `checkout.session.completed` and `customer.subscription.updated` webhooks now store it; `getUserDocumentCount()` counts expedientes since start of billing month | 2026-09-26 |
+
+### ⬜ Pending
+
+| Status | Item | Description | How to fix | Updated date |
+|--------|------|-------------|------------|--------------|
 | ⬜ | Free backups + test restore | Supabase free tier has no restore path; users' legal case data is unprotected | Skipped — consider Supabase Pro plan (includes point-in-time restore) or set up pg_dump GitHub Action + B2/R2 | |
 | ⬜ | Data-deletion runbook + test | Legal obligation (LFPDPPP); cascades cover most but not all user data | Document deletion procedure: auth user (cascades to profiles/expedientes/subscriptions/calendar_events), `webhook_events` by stripe_customer_id, Storage files, Stripe customer; test on dev account | |
 | ⬜ | One-time purchase fulfillment | A $50 payment grants nothing server-side; download is gated only by an unverified URL param + localStorage (paywall bypassable, no recovery if localStorage is lost) | Skipped — low risk for MVP; can revisit later with purchases table + download verification | |
@@ -207,4 +207,12 @@ These exist in the codebase but are not blocking:
 | ⬜ | Integration tests passing | No integration coverage for core flows | Add integration tests for auth, billing, expediente, and calculator flows | |
 | ⬜ | Load testing completed | Behavior under load is unknown | Load test chatbot, DB, and PDF generation | |
 | ⬜ | Budget alerts on all providers | No early warning against surprise bills (main risk: Gemini via chatbot abuse/bugs) | Google Cloud budget alert on the Gemini project; Supabase spend cap; Vercel usage alerts — all free, dashboard-only | |
+| ⬜ | First-subscription checkout blocked (launch blocker) | `/api/billing/checkout` returns 403 for `mode: 'subscription'` when the user has no active subscription row — but rows are only created by the `checkout.session.completed` webhook, so a brand-new user can never complete a first subscription purchase. Only affects dev/prod (local never exercises real billing); one-time `mode: 'payment'` unaffected, which is why dev payment testing passed | Rework the guard added 2026-09-26: allow checkout when no row exists; single-active-subscription enforcement already lives in the webhook (update-or-insert + cancel old). Test: brand-new account → subscribe → redirect to Stripe | |
+| ⬜ | `validateEnv()` never runs | `lib/env.ts` validates at module load only if imported — nothing imports it, so the mode-gated credential validation (fixed 2026-09-26) is dead code; a missing Stripe/Supabase key in dev/prod fails late and weirdly instead of at boot | Import for side effect in `instrumentation.ts` (Next.js startup hook) or `app/layout.tsx`; verify a preview deploy with a missing key fails loudly at startup | |
+| ⬜ | SMG fetch failure silently zeroes prima de antigüedad | `useCalculadora` catches minimum-wage fetch errors and proceeds with `SMG_value = 0` → legal cap becomes $0 → prima de antigüedad computes as $0 with no user warning. Dev/prod risk (local mock unaffected) | Block the calculation and show an error toast on SMG fetch failure; optionally retry once before failing | |
+| ⬜ | Read-path delete side effect in `getUserSubscription()` | `billing-ui.ts:55` still deletes "duplicate" subscription rows during a read (reached via `billing-actions.server.ts`) — same class of bug already removed from `canGenerateDocument()` | Move duplicate cleanup to the webhook/write path or a one-off maintenance script; keep reads pure | |
+| ⬜ | Stripe API version pinned inconsistently | `lib/services/billing.ts` uses `2026-04-22.dahlia`; webhook route + `lib/di/providers.ts` use `2026-08-26.dahlia` | Extract one `STRIPE_API_VERSION` constant (e.g. in `lib/constants/billing.ts`) and use it in all three places | |
+| ⬜ | Middleware route gaps | `/calendario` missing from `protectedRoutes` (page renders logged-out; data still safe via RLS, but no redirect to /login); `/reporte` listed but no such route exists | Add `/calendario`, remove `/reporte` in `middleware.ts`; verify logged-out redirect on preview | |
+| ⬜ | WAF rate limit for `/api/billing/checkout` | In-memory limiter is per-instance and resets on cold start (decorative on serverless); `/api/chatbot` already covered by Vercel WAF, checkout is not — Stripe session spam costs real money | Add WAF rule: path equals `/api/billing/checkout` → rate limit 10 req/min per IP → 429 (Dashboard, no code) | |
+| ⬜ | Code cleanup batch | Orphaned `/api/create-payment-intent` route (zero callers); Flutter leftover `test/widget_test.dart`; `handlePaymentClick` in calculadora swallows errors with no toast; Tailwind gray classes in calculadora paywall section + download page break the inline-styles/CSS-vars convention and dark mode | Delete orphaned route + dart file; wire `useToast()` into payment error path; convert both spots to inline styles with CSS variables per the Membresías standard | |
 | ⬜ | Final PRODUCTION_READINESS.md pass | The doc must reflect reality at launch time | Re-verify every row; fill remaining Updated dates; collapse completed sections | |
