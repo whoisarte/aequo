@@ -578,7 +578,7 @@ class MockQueryBuilder {
   private headMode: { count: 'exact' } | null = null
 
   constructor(data: Record<string, unknown>[]) {
-    this.data = [...data]
+    this.data = data
     this.filteredData = [...data]
   }
 
@@ -687,16 +687,42 @@ class MockQueryBuilder {
     return Promise.resolve({ data: newRecord, error: null })
   }
 
+  upsert(record: Record<string, unknown>) {
+    const recordId = record.id
+    if (recordId !== undefined && recordId !== null) {
+      const existingIndex = this.data.findIndex(item => item.id === recordId)
+      if (existingIndex >= 0) {
+        this.data[existingIndex] = { ...this.data[existingIndex], ...record }
+        const filteredIndex = this.filteredData.findIndex(item => item.id === recordId)
+        if (filteredIndex >= 0) {
+          this.filteredData[filteredIndex] = this.data[existingIndex]
+        }
+        return Promise.resolve({ data: this.data[existingIndex], error: null })
+      }
+    }
+    const newRecord = {
+      ...record,
+      id: record.id ?? `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    }
+    this.data.push(newRecord)
+    this.filteredData.push(newRecord)
+    return Promise.resolve({ data: newRecord, error: null })
+  }
+
   update(updates: Record<string, unknown>) {
     const self = this
     return {
       eq: (column: string, value: unknown) => {
-        self.data = self.data.map(item =>
-          item[column] === value ? { ...item, ...updates } : item
-        )
-        self.filteredData = self.filteredData.map(item =>
-          item[column] === value ? { ...item, ...updates } : item
-        )
+        for (let i = 0; i < self.data.length; i++) {
+          if (self.data[i][column] === value) {
+            self.data[i] = { ...self.data[i], ...updates }
+          }
+        }
+        for (let i = 0; i < self.filteredData.length; i++) {
+          if (self.filteredData[i][column] === value) {
+            self.filteredData[i] = { ...self.filteredData[i], ...updates }
+          }
+        }
         return Promise.resolve({ data: self.filteredData[0] || null, error: null })
       }
     }

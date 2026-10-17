@@ -45,19 +45,24 @@ export default function CalendarioPage() {
   const toast = useToast()
 
   const loadCalendarEvents = useCallback(async () => {
-    const result = await getCalendarEvents()
-    if (result.success && result.data) {
-      const events: CalendarEvent[] = result.data.map(event => ({
-        id: event.id,
-        title: event.title,
-        start: new Date(event.start_time),
-        end: new Date(event.end_time),
-        description: event.description || undefined,
-        isExpedienteEvent: false,
-      }))
-      setCalendarEvents(events)
+    try {
+      const result = await getCalendarEvents()
+      if (result.success && result.data) {
+        const events: CalendarEvent[] = result.data.map(event => ({
+          id: event.id,
+          title: event.title,
+          start: new Date(event.start_time),
+          end: new Date(event.end_time),
+          description: event.description || undefined,
+          isExpedienteEvent: false,
+        }))
+        setCalendarEvents(events)
+      }
+    } catch (err) {
+      console.error('Error loading calendar events:', err)
+    } finally {
+      setCalendarEventsLoading(false)
     }
-    setCalendarEventsLoading(false)
   }, [])
 
   useEffect(() => {

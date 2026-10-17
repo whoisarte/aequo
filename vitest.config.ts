@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['lib/calculos/**/*.test.ts', 'lib/__tests__/**/*.test.ts'],
+    include: ['lib/calculos/**/*.test.ts', 'lib/__tests__/**/*.test.ts', 'lib/di/__tests__/**/*.test.ts'],
   },
   resolve: {
     alias: {
